@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import { SecureHash } from "@/lib/utils/crypto"
 import type {
   StoreUserInfoRequest,
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Create Supabase client and get authenticated user
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const {
       data: { user },
       error: authError,
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.log("[v0] Query params:", { event_types, limit, offset, start_date, end_date })
 
     // Create Supabase client and get authenticated user
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const {
       data: { user },
       error: authError,

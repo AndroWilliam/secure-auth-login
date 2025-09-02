@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 
 // POST /api/user-info/verify-location - Verify location
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const {
       data: { user },
       error: authError,

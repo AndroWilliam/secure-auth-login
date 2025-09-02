@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import { SecureHash } from "@/lib/utils/crypto"
 
 // POST /api/user-info/verify - Verify sensitive data against stored hashes
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Create Supabase client and get authenticated user
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const {
       data: { user },
       error: authError,

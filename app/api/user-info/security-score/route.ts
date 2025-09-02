@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/supabase/server"
 import type { SecurityAssessment, SecurityFactor } from "@/lib/types/user-info"
 
 // GET /api/user-info/security-score - Calculate current security score
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.log("[v0] Security Score API: GET request received")
 
     // Create Supabase client and get authenticated user
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const {
       data: { user },
       error: authError,
