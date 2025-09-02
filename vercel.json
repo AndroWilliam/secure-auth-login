@@ -5,16 +5,16 @@
     }
   },
   "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "RESEND_API_KEY": "@resend_api_key",
-    "RESEND_FROM": "@resend_from",
-    "SMTP_HOST": "@smtp_host",
-    "SMTP_USER": "@smtp_user",
-    "SMTP_PASS": "@smtp_pass",
-    "SMTP_FROM": "@smtp_from",
-    "DEV_OTP_MODE": "@dev_otp_mode"
+    "NEXT_PUBLIC_SUPABASE_URL": "@NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_URL": "@SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY": "@SUPABASE_SERVICE_ROLE_KEY",
+    "RESEND_API_KEY": "@RESEND_API_KEY",
+    "RESEND_FROM": "@RESEND_FROM",
+    "SMTP_HOST": "@SMTP_HOST",
+    "SMTP_USER": "@SMTP_USER",
+    "SMTP_PASS": "@SMTP_PASS",
+    "SMTP_FROM": "@SMTP_FROM",
+    "DEV_OTP_MODE": "@DEV_OTP_MODE"
   }
 }
