@@ -108,7 +108,7 @@ export default function LoginPage() {
           body: JSON.stringify({ user_id: userId, geo: coords }),
         });
 
-        setCurrentStep(4);
+        setCurrentStep(3);
       } catch (e: any) {
         setError(e?.message || "Invalid login credentials");
         try {
@@ -156,7 +156,7 @@ export default function LoginPage() {
           body: JSON.stringify({ user_id: loginData.userId, geo: coords }),
         });
 
-        setCurrentStep(4);
+        setCurrentStep(3);
       } catch (e: any) {
         setError(e?.message || "OTP verification failed");
       } finally {
@@ -192,74 +192,63 @@ export default function LoginPage() {
     [loginData.userId],
   );
 
-  // STEP 4: Device ID final check
-  const handleDeviceVerification = useCallback(async () => {
+  // STEP 4: Final login completion
+  const handleLoginCompletion = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Store login completion event with device and location data
       const currentDeviceId = getDeviceId();
-      const res = await fetchJSON<{ verified: boolean }>("/api/user-info/verify-device", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: loginData.userId, deviceId: currentDeviceId }),
-      });
-
-      if (!res.verified) throw new Error("Device not recognized. Additional verification required.");
-
-      try {
-        // Store login completion event with device and location data
-        const currentDeviceId = getDeviceId();
-        const coords = await tryGetGeolocationSilently();
-        
-        // Get current location data for display
-        let currentLocationData = null;
-        if (coords) {
-          try {
-            // Use reverse geocoding to get city/country
-            const nominatimResponse = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lon}&zoom=10&addressdetails=1`
-            );
-            const geoData = await nominatimResponse.json();
-            const city = geoData.address.city || geoData.address.town || geoData.address.village || "Unknown";
-            const country = geoData.address.country || "Unknown";
-            
-            currentLocationData = {
-              city,
-              country,
-              coordinates: { lat: coords.lat, lng: coords.lon },
-            };
-          } catch (geoError) {
-            console.warn("Failed to get location name:", geoError);
-          }
+      const coords = await tryGetGeolocationSilently();
+      
+      // Get current location data for display
+      let currentLocationData = null;
+      if (coords) {
+        try {
+          // Use reverse geocoding to get city/country
+          const nominatimResponse = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lon}&zoom=10&addressdetails=1`
+          );
+          const geoData = await nominatimResponse.json();
+          const city = geoData.address.city || geoData.address.town || geoData.address.village || "Unknown";
+          const country = geoData.address.country || "Unknown";
+          
+          currentLocationData = {
+            city,
+            country,
+            coordinates: { lat: coords.lat, lng: coords.lon },
+          };
+        } catch (geoError) {
+          console.warn("Failed to get location name:", geoError);
         }
-        
-        await userInfoClient.storeEvent({
-          event_type: "login_completed",
-          event_data: {
-            userId: loginData.userId,
-            email: loginData.email,
-            device_id: currentDeviceId,
-            locationData: currentLocationData,
-            geo_location: coords ? {
-              latitude: coords.lat,
-              longitude: coords.lon,
-              radius: 50000
-            } : null,
-            loginMethod: "password",
-            securityFactors: {
-              validCredentials: true,
-              trustedDevice: true,
-              recognizedLocation: true,
-              additionalVerification: currentStep === 2,
-            },
-            timestamp: new Date().toISOString(),
+      }
+      
+      await userInfoClient.storeEvent({
+        event_type: "login_completed",
+        event_data: {
+          userId: loginData.userId,
+          email: loginData.email,
+          device_id: currentDeviceId,
+          locationData: currentLocationData,
+          geo_location: coords ? {
+            latitude: coords.lat,
+            longitude: coords.lon,
+            radius: 50000
+          } : null,
+          loginMethod: "password",
+          securityFactors: {
+            validCredentials: true,
+            trustedDevice: true,
+            recognizedLocation: true,
+            additionalVerification: currentStep === 2,
           },
-        });
-      } catch {}
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       router.replace("/dashboard");
     } catch (e: any) {
-      setError(e?.message || "Device verification failed");
+      setError(e?.message || "Login completion failed");
     } finally {
       setIsLoading(false);
     }
@@ -307,7 +296,7 @@ export default function LoginPage() {
 
           {currentStep === 4 && (
             <DeviceVerificationStep 
-              onNext={handleDeviceVerification} 
+              onNext={handleLoginCompletion} 
               isLoading={isLoading}
               deviceId={loginData.deviceId}
               isTrusted={true}

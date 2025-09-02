@@ -16,11 +16,18 @@ export function getDeviceId(): string {
     if (crypto && crypto.randomUUID) {
       deviceId = crypto.randomUUID()
     } else {
-      // Fallback for older browsers
-      deviceId = "device-" + Math.random().toString(36).substr(2, 9) + "-" + Date.now().toString(36)
+      // Fallback for older browsers - create a more unique ID
+      const timestamp = Date.now().toString(36)
+      const randomPart = Math.random().toString(36).substr(2, 9)
+      const userAgent = navigator.userAgent.slice(-8).replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+      deviceId = `device-${timestamp}-${randomPart}-${userAgent}`
     }
 
+    // Store the device ID persistently
     localStorage.setItem("deviceId", deviceId)
+    console.log("[DEVICE_ID] Generated new device ID:", deviceId)
+  } else {
+    console.log("[DEVICE_ID] Using existing device ID:", deviceId)
   }
 
   return deviceId
@@ -32,7 +39,20 @@ export function getDeviceId(): string {
 export function clearDeviceId(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem("deviceId")
+    console.log("[DEVICE_ID] Cleared device ID")
   }
+}
+
+/**
+ * Force generate a new device ID (useful for testing different devices)
+ */
+export function generateNewDeviceId(): string {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("deviceId")
+    console.log("[DEVICE_ID] Forced generation of new device ID")
+    return getDeviceId()
+  }
+  return "server-side-device-id"
 }
 
 /**
