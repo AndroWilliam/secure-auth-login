@@ -14,27 +14,37 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 export async function createServerClient() {
   const cookieStore = await cookies();
 
-  // Lazy import to avoid build-time module resolution errors if @supabase/ssr isn't installed
-  const { createServerClient } = await import("@supabase/ssr");
+  try {
+    // Lazy import to avoid build-time module resolution errors if @supabase/ssr isn't installed
+    const { createServerClient } = await import("@supabase/ssr");
 
-  return createServerClient(PUBLIC_URL, PUBLIC_ANON, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+    return createServerClient(PUBLIC_URL, PUBLIC_ANON, {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options?: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options?: any) {
+          cookieStore.delete({ name, ...options } as any);
+        },
       },
-      set(name: string, value: string, options?: any) {
-        cookieStore.set({ name, value, ...options });
-      },
-      remove(name: string, options?: any) {
-        cookieStore.delete({ name, ...options } as any);
-      },
-    },
-  });
+    });
+  } catch (error) {
+    console.error("Failed to create Supabase server client:", error);
+    throw new Error("Supabase client initialization failed. Please check your environment variables and dependencies.");
+  }
 }
 
 /** Use this only for admin tasks (no cookies, service key) */
 export function createServiceClient() {
-  return createServiceSupabaseClient(SERVICE_URL, SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
+  try {
+    return createServiceSupabaseClient(SERVICE_URL, SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+  } catch (error) {
+    console.error("Failed to create Supabase service client:", error);
+    throw new Error("Supabase service client initialization failed. Please check your environment variables.");
+  }
 }
