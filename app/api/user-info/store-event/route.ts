@@ -1,5 +1,5 @@
 // app/api/user-info/store-event/route.ts
-export const runtime = "nodejs20";
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";

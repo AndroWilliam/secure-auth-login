@@ -1,5 +1,5 @@
 // app/api/auth/otp/verify/route.ts
-export const runtime = "nodejs20";
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server";
