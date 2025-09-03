@@ -1,5 +1,5 @@
 // app/api/login/credentials/route.ts
-export const runtime = "nodejs";
+export const runtime = "nodejs20";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";

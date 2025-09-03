@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+export const runtime = "nodejs20";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
