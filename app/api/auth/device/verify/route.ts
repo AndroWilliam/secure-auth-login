@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase/server"
-import { generateDeviceFingerprint, getDeviceInfo } from "@/lib/utils/device-fingerprint"
+import { generateDeviceFingerprint } from "@/lib/utils/device-fingerprint"
 import { generateOTP, storeOTP, sendOTPEmail } from "@/lib/utils/otp-generator"
 
 export async function POST(request: NextRequest) {
@@ -18,9 +18,14 @@ export async function POST(request: NextRequest) {
     const { deviceFingerprint: clientFingerprint } = await request.json()
 
     // Generate server-side fingerprint for comparison
-    const serverFingerprint = generateDeviceFingerprint(request)
+    const serverFingerprint = generateDeviceFingerprint()
     const userAgent = request.headers.get("user-agent") || ""
-    const deviceInfo = getDeviceInfo(userAgent)
+    const deviceInfo = {
+      name: "Unknown Device",
+      type: "desktop",
+      browser: "Unknown",
+      os: "Unknown"
+    }
 
     // Check if device is already trusted
     const { data: trustedDevice } = await supabase

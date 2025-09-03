@@ -144,7 +144,7 @@ export default function DeviceDebugPage() {
                 <li>• <strong>IP Hash:</strong> First 8 characters of your IP address</li>
                 <li>• <strong>Hardware Fingerprint:</strong> Based on screen, CPU, and browser characteristics</li>
                 <li>• <strong>Persistent ID:</strong> Stored in localStorage for consistency</li>
-                <li>• <strong>Format:</strong> hybrid-{ipHash}-{hardwareFingerprint}-{persistentId}</li>
+                <li>• <strong>Format:</strong> hybrid-[ipHash]-[hardwareFingerprint]-[persistentId]</li>
               </ul>
             </div>
             <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
