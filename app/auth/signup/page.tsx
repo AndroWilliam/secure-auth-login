@@ -229,21 +229,24 @@ export default function SignupPage() {
           const { deviceId } = await deviceResponse.json();
           console.log("[SIGNUP] Generated IP-based device ID:", deviceId);
   
-          await fetch("/api/user-info/create", {
+          // Store signup completed event with device ID
+          await fetch("/api/user-info/store-event", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              user_id: userId,
-              device_id: deviceId,
-              user_name: signupData.identity.displayName,
-              user_email: signupData.identity.email,
-              user_password_hash: signupData.identity.password, // API will hash
-              geo_location: {
-                latitude: signupData.security.locationData?.coordinates?.lat,
-                longitude: signupData.security.locationData?.coordinates?.lng,
-                radius: 50000,
+              event_type: "signup_completed",
+              event_data: {
+                userId: userId,
+                email: signupData.identity.email,
+                device_id: deviceId,
+                locationData: signupData.security.locationData,
+                geo_location: {
+                  latitude: signupData.security.locationData?.coordinates?.lat,
+                  longitude: signupData.security.locationData?.coordinates?.lng,
+                  radius: 50000,
+                },
+                securityQuestions: signupData.security.securityQuestions,
               },
-              security_questions: signupData.security.securityQuestions,
             }),
           })
         } catch (userInfoError) {
