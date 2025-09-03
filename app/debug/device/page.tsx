@@ -30,6 +30,25 @@ export default function DeviceDebugPage() {
     setDeviceId(newId);
   };
 
+  const handleGenerateIpBasedDeviceId = async () => {
+    try {
+      const response = await fetch("/api/device/generate-id", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (response.ok) {
+        const { deviceId, ip } = await response.json();
+        setDeviceId(deviceId);
+        console.log("Generated IP-based device ID:", deviceId, "for IP:", ip);
+      } else {
+        console.error("Failed to generate IP-based device ID");
+      }
+    } catch (error) {
+      console.error("Error generating IP-based device ID:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -51,7 +70,10 @@ export default function DeviceDebugPage() {
                 Get Current Device ID
               </Button>
               <Button onClick={handleGenerateNewDeviceId} variant="outline" className="w-full">
-                Generate New Device ID
+                Generate New Client Device ID
+              </Button>
+              <Button onClick={handleGenerateIpBasedDeviceId} variant="outline" className="w-full">
+                Generate IP-Based Device ID
               </Button>
               <Button onClick={handleClearDeviceId} variant="destructive" className="w-full">
                 Clear Device ID
@@ -111,20 +133,20 @@ export default function DeviceDebugPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold">Test Same Device Login:</h4>
+              <h4 className="font-semibold">Test Same IP Login (IP-Based):</h4>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Sign up with a new account</li>
-                <li>Note the device ID shown above</li>
+                <li>Sign up with a new account (IP-based device ID will be generated)</li>
+                <li>Click "Generate IP-Based Device ID" to see your current IP-based ID</li>
                 <li>Log out and log back in with the same account</li>
-                <li>You should NOT be prompted for OTP (device should be recognized)</li>
+                <li>You should NOT be prompted for OTP (same IP should be recognized)</li>
               </ol>
             </div>
             <div>
-              <h4 className="font-semibold">Test Different Device Login:</h4>
+              <h4 className="font-semibold">Test Different IP Login:</h4>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Click "Generate New Device ID" to simulate a different device</li>
+                <li>Use a VPN or different network to change your IP</li>
                 <li>Try to log in with the same account</li>
-                <li>You SHOULD be prompted for OTP (device should not be recognized)</li>
+                <li>You SHOULD be prompted for OTP (different IP should not be recognized)</li>
               </ol>
             </div>
             <div>

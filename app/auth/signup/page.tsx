@@ -216,7 +216,18 @@ export default function SignupPage() {
       // === From here on we have a userId, whether created during verify or here ===
       if (userId) {
         try {
-          const deviceId = getDeviceId()
+          // Generate IP-based device ID
+          const deviceResponse = await fetch("/api/device/generate-id", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+          
+          if (!deviceResponse.ok) {
+            throw new Error("Failed to generate device ID");
+          }
+          
+          const { deviceId } = await deviceResponse.json();
+          console.log("[SIGNUP] Generated IP-based device ID:", deviceId);
   
           await fetch("/api/user-info/create", {
             method: "POST",
@@ -240,7 +251,19 @@ export default function SignupPage() {
         }
   
         try {
-          const deviceId = getDeviceId()
+          // Generate IP-based device ID for event storage
+          const deviceResponse = await fetch("/api/device/generate-id", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+          
+          if (!deviceResponse.ok) {
+            throw new Error("Failed to generate device ID");
+          }
+          
+          const { deviceId } = await deviceResponse.json();
+          console.log("[SIGNUP] Using IP-based device ID for event:", deviceId);
+          
           await userInfoClient.storeEvent({
             event_type: "signup_completed",
             event_data: {

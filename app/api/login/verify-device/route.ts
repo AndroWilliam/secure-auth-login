@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { isSameIpDevice, getClientIp } from "@/lib/utils/ip-device-id";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,17 +50,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ device_ok: false, action: "send_email_otp", email: email || undefined }, { status: 200 });
     }
 
-    // Compare device IDs
-    const device_ok = storedDeviceId === deviceId;
+    // Compare device IDs using IP-based comparison
+    const device_ok = isSameIpDevice(storedDeviceId, deviceId);
+    const currentIp = getClientIp(req);
     
     console.log("[LOGIN_VERIFY_DEVICE] Device comparison:", { 
       storedDeviceId, 
       currentDeviceId: deviceId, 
+      currentIp,
       device_ok 
     });
 
     if (!device_ok) {
-      console.log("[LOGIN_VERIFY_DEVICE] Device mismatch - triggering OTP");
+      console.log("[LOGIN_VERIFY_DEVICE] Device IP mismatch - triggering OTP");
       return NextResponse.json({ device_ok: false, action: "send_email_otp", email: email || undefined }, { status: 200 });
     }
 

@@ -78,7 +78,19 @@ export default function LoginPage() {
 
         const userId = cred.user_id;
         const signupEmail = (cred.email || email).trim().toLowerCase();
-        const deviceId = getDeviceId();
+        
+        // Generate IP-based device ID for verification
+        const deviceResponse = await fetch("/api/device/generate-id", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        
+        if (!deviceResponse.ok) {
+          throw new Error("Failed to generate device ID");
+        }
+        
+        const { deviceId } = await deviceResponse.json();
+        console.log("[LOGIN] Generated IP-based device ID:", deviceId);
 
         // 2) Device check
         const dev = await fetchJSON<DeviceRes>("/api/login/verify-device", {
@@ -197,8 +209,19 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Store login completion event with device and location data
-      const currentDeviceId = getDeviceId();
+      // Generate IP-based device ID for login completion
+      const deviceResponse = await fetch("/api/device/generate-id", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (!deviceResponse.ok) {
+        throw new Error("Failed to generate device ID");
+      }
+      
+      const { deviceId: currentDeviceId } = await deviceResponse.json();
+      console.log("[LOGIN_COMPLETION] Using IP-based device ID:", currentDeviceId);
+      
       const coords = await tryGetGeolocationSilently();
       
       // Get current location data for display

@@ -1,7 +1,12 @@
 /**
  * Generate and manage a consistent device ID for the current browser/device
  * Used for device verification during authentication
+ * 
+ * Note: This is now a client-side temporary ID. The server will replace it
+ * with an IP-based device ID during the authentication process.
  */
+
+import { generateClientDeviceId, isTemporaryDeviceId } from './ip-device-id';
 
 export function getDeviceId(): string {
   // Check if we're in a browser environment
@@ -12,20 +17,12 @@ export function getDeviceId(): string {
   let deviceId = localStorage.getItem("deviceId")
 
   if (!deviceId) {
-    // Generate a new device ID using crypto.randomUUID if available
-    if (crypto && crypto.randomUUID) {
-      deviceId = crypto.randomUUID()
-    } else {
-      // Fallback for older browsers - create a more unique ID
-      const timestamp = Date.now().toString(36)
-      const randomPart = Math.random().toString(36).substr(2, 9)
-      const userAgent = navigator.userAgent.slice(-8).replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
-      deviceId = `device-${timestamp}-${randomPart}-${userAgent}`
-    }
-
+    // Generate a temporary device ID (will be replaced by server with IP-based ID)
+    deviceId = generateClientDeviceId()
+    
     // Store the device ID persistently
     localStorage.setItem("deviceId", deviceId)
-    console.log("[DEVICE_ID] Generated new device ID:", deviceId)
+    console.log("[DEVICE_ID] Generated temporary device ID:", deviceId)
   } else {
     console.log("[DEVICE_ID] Using existing device ID:", deviceId)
   }
