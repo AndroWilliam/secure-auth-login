@@ -6,6 +6,9 @@
 import { getClientIp } from './ip-device-id';
 import { HardwareDeviceInfo, generateHardwareDeviceId, compareHardwareDeviceIds } from './hardware-device-id';
 
+// Re-export getClientIp for use in API routes
+export { getClientIp };
+
 export interface HybridDeviceId {
   deviceId: string;
   ipHash: string;
