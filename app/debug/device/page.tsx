@@ -30,7 +30,7 @@ export default function DeviceDebugPage() {
     setDeviceId(newId);
   };
 
-  const handleGenerateIpBasedDeviceId = async () => {
+  const handleGenerateHybridDeviceId = async () => {
     try {
       const response = await fetch("/api/device/generate-id", {
         method: "POST",
@@ -38,14 +38,20 @@ export default function DeviceDebugPage() {
       });
       
       if (response.ok) {
-        const { deviceId, ip } = await response.json();
+        const { deviceId, ip, ipHash, hardwareFingerprint, persistentId } = await response.json();
         setDeviceId(deviceId);
-        console.log("Generated IP-based device ID:", deviceId, "for IP:", ip);
+        console.log("Generated hybrid device ID:", {
+          deviceId,
+          ip,
+          ipHash,
+          hardwareFingerprint,
+          persistentId
+        });
       } else {
-        console.error("Failed to generate IP-based device ID");
+        console.error("Failed to generate hybrid device ID");
       }
     } catch (error) {
-      console.error("Error generating IP-based device ID:", error);
+      console.error("Error generating hybrid device ID:", error);
     }
   };
 
@@ -72,8 +78,8 @@ export default function DeviceDebugPage() {
               <Button onClick={handleGenerateNewDeviceId} variant="outline" className="w-full">
                 Generate New Client Device ID
               </Button>
-              <Button onClick={handleGenerateIpBasedDeviceId} variant="outline" className="w-full">
-                Generate IP-Based Device ID
+              <Button onClick={handleGenerateHybridDeviceId} variant="outline" className="w-full">
+                Generate Hybrid Device ID
               </Button>
               <Button onClick={handleClearDeviceId} variant="destructive" className="w-full">
                 Clear Device ID
@@ -126,6 +132,35 @@ export default function DeviceDebugPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Hybrid Device ID System</CardTitle>
+            <CardDescription>
+              How the hybrid device identification works
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="p-3 bg-muted rounded-lg">
+              <h4 className="font-semibold text-sm mb-2">Hybrid Device ID Components:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li>• <strong>IP Hash:</strong> First 8 characters of your IP address</li>
+                <li>• <strong>Hardware Fingerprint:</strong> Based on screen, CPU, and browser characteristics</li>
+                <li>• <strong>Persistent ID:</strong> Stored in localStorage for consistency</li>
+                <li>• <strong>Format:</strong> hybrid-{ipHash}-{hardwareFingerprint}-{persistentId}</li>
+              </ul>
+            </div>
+            <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+              <h4 className="font-semibold text-sm mb-2 text-green-800 dark:text-green-200">Recognition Logic:</h4>
+              <ul className="text-sm space-y-1 text-green-700 dark:text-green-300">
+                <li>✅ Same persistent ID = Same device</li>
+                <li>✅ Same hardware fingerprint = Same device</li>
+                <li>✅ Same IP hash = Same network</li>
+                <li>❌ All different = Different device (triggers OTP)</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Testing Instructions</CardTitle>
             <CardDescription>
               How to test the device ID functionality
@@ -133,20 +168,20 @@ export default function DeviceDebugPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold">Test Same IP Login (IP-Based):</h4>
+              <h4 className="font-semibold">Test Same Device Login (Hybrid):</h4>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Sign up with a new account (IP-based device ID will be generated)</li>
-                <li>Click "Generate IP-Based Device ID" to see your current IP-based ID</li>
+                <li>Sign up with a new account (hybrid device ID will be generated)</li>
+                <li>Click "Generate Hybrid Device ID" to see your current hybrid ID</li>
                 <li>Log out and log back in with the same account</li>
-                <li>You should NOT be prompted for OTP (same IP should be recognized)</li>
+                <li>You should NOT be prompted for OTP (same device should be recognized)</li>
               </ol>
             </div>
             <div>
-              <h4 className="font-semibold">Test Different IP Login:</h4>
+              <h4 className="font-semibold">Test Different Device Login:</h4>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Use a VPN or different network to change your IP</li>
+                <li>Use a different browser or clear browser data</li>
                 <li>Try to log in with the same account</li>
-                <li>You SHOULD be prompted for OTP (different IP should not be recognized)</li>
+                <li>You SHOULD be prompted for OTP (different device should not be recognized)</li>
               </ol>
             </div>
             <div>

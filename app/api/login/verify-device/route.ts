@@ -3,7 +3,30 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { isSameIpDevice, getClientIp } from "@/lib/utils/ip-device-id";
+import { compareHybridDeviceIds, getClientIp, HybridDeviceId } from "@/lib/utils/hybrid-device-id";
+
+// Helper function to parse hybrid device ID
+function parseHybridDeviceId(deviceId: string): HybridDeviceId {
+  const parts = deviceId.split('-');
+  if (parts.length >= 4 && parts[0] === 'hybrid') {
+    return {
+      deviceId,
+      ipHash: parts[1],
+      hardwareFingerprint: parts[2],
+      persistentId: parts.slice(3).join('-'),
+      timestamp: Date.now()
+    };
+  }
+  
+  // Fallback for non-hybrid device IDs
+  return {
+    deviceId,
+    ipHash: 'unknown',
+    hardwareFingerprint: 'unknown',
+    persistentId: 'unknown',
+    timestamp: Date.now()
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -50,19 +73,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ device_ok: false, action: "send_email_otp", email: email || undefined }, { status: 200 });
     }
 
-    // Compare device IDs using IP-based comparison
-    const device_ok = isSameIpDevice(storedDeviceId, deviceId);
+    // Compare device IDs using hybrid comparison
     const currentIp = getClientIp(req);
+    
+    // Parse stored device ID to extract components
+    const storedDeviceComponents = parseHybridDeviceId(storedDeviceId);
+    const currentDeviceComponents = parseHybridDeviceId(deviceId);
+    
+    const device_ok = compareHybridDeviceIds(storedDeviceComponents, currentDeviceComponents);
     
     console.log("[LOGIN_VERIFY_DEVICE] Device comparison:", { 
       storedDeviceId, 
       currentDeviceId: deviceId, 
       currentIp,
+      storedComponents: storedDeviceComponents,
+      currentComponents: currentDeviceComponents,
       device_ok 
     });
 
     if (!device_ok) {
-      console.log("[LOGIN_VERIFY_DEVICE] Device IP mismatch - triggering OTP");
+      console.log("[LOGIN_VERIFY_DEVICE] Device mismatch - triggering OTP");
       return NextResponse.json({ device_ok: false, action: "send_email_otp", email: email || undefined }, { status: 200 });
     }
 

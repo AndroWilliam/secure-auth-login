@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { generateIpBasedDeviceId, getClientIp } from "@/lib/utils/ip-device-id";
+import { generateHybridDeviceId, getClientIp } from "@/lib/utils/hybrid-device-id";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,13 +12,16 @@ export async function POST(req: NextRequest) {
     const clientIp = getClientIp(req);
     console.log("[GENERATE_DEVICE_ID] Client IP:", clientIp);
     
-    // Generate IP-based device ID
-    const deviceId = generateIpBasedDeviceId(clientIp);
-    console.log("[GENERATE_DEVICE_ID] Generated device ID:", deviceId);
+    // Generate hybrid device ID
+    const hybridDeviceId = generateHybridDeviceId(clientIp);
+    console.log("[GENERATE_DEVICE_ID] Generated hybrid device ID:", hybridDeviceId);
     
     return NextResponse.json({ 
-      deviceId,
+      deviceId: hybridDeviceId.deviceId,
       ip: clientIp,
+      ipHash: hybridDeviceId.ipHash,
+      hardwareFingerprint: hybridDeviceId.hardwareFingerprint,
+      persistentId: hybridDeviceId.persistentId,
       timestamp: new Date().toISOString()
     }, { status: 200 });
     
