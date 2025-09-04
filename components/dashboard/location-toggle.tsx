@@ -24,12 +24,15 @@ export function LocationToggle() {
     const checkLocationStatus = () => {
       if (!navigator.geolocation) {
         setLocationStatus("unavailable")
+        setLocationEnabled(false)
         return
       }
 
       // Check if location was previously granted during signup
       const signupLocationStatus = localStorage.getItem("signup_location_status")
-      if (signupLocationStatus === "granted") {
+      const currentLocationData = localStorage.getItem("current_location_data")
+      
+      if (signupLocationStatus === "granted" || currentLocationData) {
         setLocationEnabled(true)
         setLocationStatus("granted")
       } else if (signupLocationStatus === "denied") {
@@ -43,6 +46,7 @@ export function LocationToggle() {
             if (result.state === "granted") {
               setLocationEnabled(true)
               setLocationStatus("granted")
+              localStorage.setItem("signup_location_status", "granted")
             } else {
               setLocationEnabled(false)
               setLocationStatus("denied")
@@ -135,8 +139,12 @@ export function LocationToggle() {
     setLocationEnabled(false)
     setLocationStatus("denied")
     localStorage.setItem("signup_location_status", "denied")
+    localStorage.removeItem("current_location_data")
     setShowDisableDialog(false)
     console.log("[v0] Location access disabled by user")
+    
+    // Trigger page refresh to update the location card
+    window.location.reload()
   }
 
   const getStatusText = () => {

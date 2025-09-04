@@ -52,28 +52,58 @@ export default async function DashboardPage() {
   const currentLocation = loginData?.locationData || loginData?.geo_location
   const currentDeviceId = loginData?.device_id
 
-  // Get device names from user agent strings
-  const getDeviceName = (deviceId: string) => {
-    // This is a simplified device detection - in a real app you'd store device names
-    if (deviceId.includes("server-side")) {
-      return "Current Device"
+  // Get device names from user agent strings and device info
+  const getDeviceName = (deviceId: string, eventData: any) => {
+    // Try to extract device info from the event data
+    const deviceInfo = eventData?.deviceInfo || eventData?.device_fingerprint || {}
+    
+    // Check for common device patterns in user agent or device info
+    const userAgent = deviceInfo.userAgent || ""
+    const platform = deviceInfo.platform || ""
+    
+    if (userAgent.includes("iPhone") || userAgent.includes("Mobile")) {
+      return "iPhone"
+    } else if (userAgent.includes("iPad")) {
+      return "iPad"
+    } else if (userAgent.includes("Android")) {
+      return "Android Device"
+    } else if (userAgent.includes("Macintosh") || userAgent.includes("Mac OS")) {
+      return "MacBook"
+    } else if (userAgent.includes("Windows")) {
+      return "Windows PC"
+    } else if (userAgent.includes("Linux")) {
+      return "Linux PC"
+    } else if (platform.includes("Mac")) {
+      return "MacBook"
+    } else if (platform.includes("Win")) {
+      return "Windows PC"
+    } else if (platform.includes("Linux")) {
+      return "Linux PC"
+    } else if (platform.includes("iPhone")) {
+      return "iPhone"
+    } else if (platform.includes("Android")) {
+      return "Android Device"
     }
-    return "Unknown Device"
+    
+    // Fallback to device ID hash for uniqueness
+    return `Device ${deviceId.slice(-4).toUpperCase()}`
   }
 
   // Count unique devices and get their names
   const uniqueDevices = new Set()
   const deviceNames = new Set()
   
+  // Add signup device
   if (signupDeviceId) {
     uniqueDevices.add(signupDeviceId)
-    deviceNames.add("Signup Device")
+    deviceNames.add(getDeviceName(signupDeviceId, signupData))
   }
   
+  // Add all login devices
   allLoginEvents?.forEach(event => {
     if (event.event_data?.device_id) {
       uniqueDevices.add(event.event_data.device_id)
-      deviceNames.add(getDeviceName(event.event_data.device_id))
+      deviceNames.add(getDeviceName(event.event_data.device_id, event.event_data))
     }
   })
 
