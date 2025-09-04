@@ -94,12 +94,25 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
       }
 
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000,
-        })
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            console.log("Geolocation success:", pos.coords)
+            resolve(pos)
+          },
+          (error) => {
+            console.error("Geolocation error:", error)
+            reject(error)
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000,
+          }
+        )
       })
+
+      // If we get here, location permission was granted and we have coordinates
+      console.log("Location permission granted, coordinates:", position.coords)
 
       // Reverse geocode coordinates → city, country using OpenStreetMap Nominatim
       const lat = position.coords.latitude
@@ -119,12 +132,22 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
           const city = address.city || address.town || address.village || address.county || "Unknown"
           const country = address.country || "Unknown"
           return { city, country }
-        } catch {
+        } catch (error) {
+          console.warn("Reverse geocoding failed:", error)
           return { city: "Unknown", country: "Unknown" }
         }
       }
 
-      const { city, country } = await reverseGeocode(lat, lng)
+      // Try to get city/country, but don't fail if it doesn't work
+      let city = "Unknown"
+      let country = "Unknown"
+      try {
+        const geoResult = await reverseGeocode(lat, lng)
+        city = geoResult.city
+        country = geoResult.country
+      } catch (error) {
+        console.warn("Reverse geocoding failed, using coordinates only:", error)
+      }
 
       const locationData = {
         city,
@@ -140,6 +163,18 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
       setLocationStatus("success")
     } catch (error) {
       console.error("Location error:", error)
+      
+      // Check if it's a permission denied error
+      if (error instanceof GeolocationPositionError) {
+        if (error.code === error.PERMISSION_DENIED) {
+          console.log("Location permission explicitly denied by user")
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          console.log("Location position unavailable")
+        } else if (error.code === error.TIMEOUT) {
+          console.log("Location request timed out")
+        }
+      }
+      
       setLocationStatus("error")
     }
   }
