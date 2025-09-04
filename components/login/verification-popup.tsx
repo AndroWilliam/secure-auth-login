@@ -34,15 +34,17 @@ export function VerificationPopup({ onComplete, deviceId, userId, email }: Verif
       await new Promise(resolve => setTimeout(resolve, 1500))
       setStatus(prev => ({ ...prev, deviceId: true }))
 
-      // Step 2: Verify Location (simulate delay)
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      setStatus(prev => ({ ...prev, location: true }))
+      // Step 2: Request location permission
+      await requestLocationPermission()
+      
+      // Step 3: Verify location after permission is granted
+      await verifyLocation()
 
-      // Step 3: Complete verification
+      // Step 4: Complete verification
       await new Promise(resolve => setTimeout(resolve, 500))
       setIsComplete(true)
 
-      // Step 4: Redirect after short delay
+      // Step 5: Redirect after short delay
       await new Promise(resolve => setTimeout(resolve, 1000))
       onComplete()
     } catch (error) {
@@ -51,6 +53,58 @@ export function VerificationPopup({ onComplete, deviceId, userId, email }: Verif
       setIsComplete(true)
       setTimeout(onComplete, 1000)
     }
+  }
+
+  const requestLocationPermission = async (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        console.warn("Geolocation not supported")
+        resolve()
+        return
+      }
+
+      // Check if permission is already granted
+      navigator.permissions?.query({ name: "geolocation" })
+        .then((result) => {
+          if (result.state === "granted") {
+            console.log("Location permission already granted")
+            resolve()
+            return
+          }
+          
+          // Request permission by trying to get current position
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              console.log("Location permission granted:", position.coords)
+              resolve()
+            },
+            (error) => {
+              console.warn("Location permission denied or error:", error)
+              // Don't reject - just continue without location
+              resolve()
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 300000,
+            }
+          )
+        })
+        .catch(() => {
+          console.warn("Permission query failed")
+          resolve()
+        })
+    })
+  }
+
+  const verifyLocation = async (): Promise<void> => {
+    return new Promise((resolve) => {
+      // Simulate location verification delay
+      setTimeout(() => {
+        setStatus(prev => ({ ...prev, location: true }))
+        resolve()
+      }, 1500)
+    })
   }
 
   const VerificationItem = ({ 
@@ -89,7 +143,7 @@ export function VerificationPopup({ onComplete, deviceId, userId, email }: Verif
         <CardHeader className="text-center">
           <CardTitle className="text-xl font-bold">Verifying Security</CardTitle>
           <CardDescription>
-            Please wait while we verify your device and location
+            Please wait while we verify your device and request location access
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -102,7 +156,7 @@ export function VerificationPopup({ onComplete, deviceId, userId, email }: Verif
           
           <VerificationItem
             icon={MapPin}
-            label="Location Verification"
+            label="Location Access"
             isVerified={status.location}
             isActive={status.deviceId && !status.location && !isComplete}
           />
