@@ -10,6 +10,7 @@ import { CredentialStep } from "@/components/login/credential-step";
 import { LocationVerificationStep } from "@/components/login/location-verification-step";
 import { DeviceVerificationStep } from "@/components/login/device-verification-step";
 import { OtpVerificationStep } from "@/components/login/otp-verification-step";
+import { VerificationPopup } from "@/components/login/verification-popup";
 import { tryGetGeolocationSilently } from "@/lib/utils/try-get-geo";
 import { userInfoClient } from "@/lib/sdk/secure-user-info-client";
 import { getDeviceId } from "@/lib/utils/get-device-id";
@@ -49,9 +50,10 @@ export default function LoginPage() {
   // Steps:
   // 1 = credentials (email + password)
   // 2 = OTP (only if device mismatch)
-  // 3 = location (interactive if you keep it)
-  // 4 = device finalization + redirect
+  // 3 = verification popup (device + location)
+  // 4 = redirect to dashboard
   const [currentStep, setCurrentStep] = useState(1);
+  const [showVerificationPopup, setShowVerificationPopup] = useState(false);
 
   const [loginData, setLoginData] = useState<LoginData>({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
@@ -112,15 +114,8 @@ export default function LoginPage() {
           return;
         }
 
-        // 3) Silent location verification (best-effort)
-        const coords = await tryGetGeolocationSilently();
-        await fetchJSON("/api/login/verify-location", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, geo: coords }),
-        });
-
-        setCurrentStep(3);
+        // 3) Show verification popup (device + location)
+        setShowVerificationPopup(true);
       } catch (e: any) {
         setError(e?.message || "Invalid login credentials");
         try {
@@ -160,15 +155,8 @@ export default function LoginPage() {
 
         if (!res.ok) throw new Error("Invalid or expired code");
 
-        // After OTP, do silent geo and continue
-        const coords = await tryGetGeolocationSilently();
-        await fetchJSON<VerifyLocRes>("/api/login/verify-location", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: loginData.userId, geo: coords }),
-        });
-
-        setCurrentStep(3);
+        // After OTP, show verification popup
+        setShowVerificationPopup(true);
       } catch (e: any) {
         setError(e?.message || "OTP verification failed");
       } finally {
@@ -312,21 +300,20 @@ export default function LoginPage() {
               }}
             />
           )}
-
-          {currentStep === 3 && (
-            <LocationVerificationStep onNext={() => setCurrentStep(4)} isLoading={isLoading} />
-          )}
-
-          {currentStep === 4 && (
-            <DeviceVerificationStep 
-              onNext={handleLoginCompletion} 
-              isLoading={isLoading}
-              deviceId={loginData.deviceId}
-              isTrusted={true}
-            />
-          )}
         </div>
       </div>
+    );
+  }
+
+  // Show verification popup if needed
+  if (showVerificationPopup) {
+    return (
+      <VerificationPopup
+        onComplete={handleLoginCompletion}
+        deviceId={loginData.deviceId || ""}
+        userId={loginData.userId || ""}
+        email={loginData.email}
+      />
     );
   }
 
