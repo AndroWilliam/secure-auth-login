@@ -267,12 +267,26 @@ export default function SignupPage() {
           const { deviceId } = await deviceResponse.json();
           console.log("[SIGNUP] Using IP-based device ID for event:", deviceId);
           
+          // Get device fingerprint information
+          const deviceInfo = {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            screenResolution: `${screen.width}x${screen.height}`,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language,
+            hardwareConcurrency: navigator.hardwareConcurrency || 0,
+            maxTouchPoints: navigator.maxTouchPoints || 0,
+            colorDepth: screen.colorDepth || 0,
+            pixelRatio: window.devicePixelRatio || 1,
+          };
+
           await userInfoClient.storeEvent({
             event_type: "signup_completed",
             event_data: {
               userId,
               email: signupData.identity.email,
               device_id: deviceId,
+              deviceInfo,
               locationData: signupData.location.locationData,
               geo_location: signupData.location.locationData?.coordinates ? {
                 latitude: signupData.location.locationData.coordinates.lat,

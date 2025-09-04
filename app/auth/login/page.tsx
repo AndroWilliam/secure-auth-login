@@ -234,12 +234,26 @@ export default function LoginPage() {
         }
       }
       
+      // Get device fingerprint information
+      const deviceInfo = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        screenResolution: `${screen.width}x${screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language,
+        hardwareConcurrency: navigator.hardwareConcurrency || 0,
+        maxTouchPoints: navigator.maxTouchPoints || 0,
+        colorDepth: screen.colorDepth || 0,
+        pixelRatio: window.devicePixelRatio || 1,
+      };
+
       await userInfoClient.storeEvent({
         event_type: "login_completed",
         event_data: {
           userId: loginData.userId,
           email: loginData.email,
           device_id: currentDeviceId,
+          deviceInfo,
           locationData: currentLocationData,
           geo_location: coords ? {
             latitude: coords.lat,
