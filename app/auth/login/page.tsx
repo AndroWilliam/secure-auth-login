@@ -281,6 +281,12 @@ export default function LoginPage() {
     } catch (e: any) {
       console.error("[LOGIN_COMPLETION] Error:", e)
       setError(e?.message || "Login completion failed");
+      
+      // Fallback: redirect to dashboard anyway
+      console.log("[LOGIN_COMPLETION] Fallback redirect to dashboard")
+      setTimeout(() => {
+        router.replace("/dashboard")
+      }, 1000)
     } finally {
       setIsLoading(false);
     }
@@ -326,6 +332,12 @@ export default function LoginPage() {
     );
   }
 
+  // Direct redirect function as fallback
+  const handleDirectRedirect = useCallback(() => {
+    console.log("[LOGIN] Direct redirect to dashboard")
+    router.replace("/dashboard")
+  }, [router])
+
   // Show verification popup if needed
   if (showVerificationPopup) {
     return (
@@ -334,6 +346,7 @@ export default function LoginPage() {
         deviceId={loginData.deviceId || ""}
         userId={loginData.userId || ""}
         email={loginData.email}
+        onDirectRedirect={handleDirectRedirect}
       />
     );
   }

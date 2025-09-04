@@ -9,6 +9,7 @@ interface VerificationPopupProps {
   deviceId: string
   userId: string
   email: string
+  onDirectRedirect?: () => void
 }
 
 interface VerificationStatus {
@@ -16,7 +17,7 @@ interface VerificationStatus {
   location: boolean
 }
 
-export function VerificationPopup({ onComplete, deviceId, userId, email }: VerificationPopupProps) {
+export function VerificationPopup({ onComplete, deviceId, userId, email, onDirectRedirect }: VerificationPopupProps) {
   const [status, setStatus] = useState<VerificationStatus>({
     deviceId: false,
     location: false,
@@ -47,7 +48,17 @@ export function VerificationPopup({ onComplete, deviceId, userId, email }: Verif
       // Step 5: Redirect after short delay
       await new Promise(resolve => setTimeout(resolve, 1000))
       console.log("[VERIFICATION_POPUP] Calling onComplete")
+      
+      // Call the completion handler
       onComplete()
+      
+      // If direct redirect is provided, use it as fallback
+      if (onDirectRedirect) {
+        setTimeout(() => {
+          console.log("[VERIFICATION_POPUP] Using direct redirect")
+          onDirectRedirect()
+        }, 1500)
+      }
     } catch (error) {
       console.error("Verification failed:", error)
       // Still complete to avoid blocking user
