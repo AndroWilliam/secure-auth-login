@@ -194,6 +194,8 @@ export default function LoginPage() {
 
   // STEP 4: Final login completion
   const handleLoginCompletion = useCallback(async () => {
+    console.log("[LOGIN_COMPLETION] Starting login completion")
+    setShowVerificationPopup(false); // Hide the popup first
     setIsLoading(true);
     setError(null);
     try {
@@ -274,8 +276,10 @@ export default function LoginPage() {
         },
       });
 
+      console.log("[LOGIN_COMPLETION] Redirecting to dashboard")
       router.replace("/dashboard");
     } catch (e: any) {
+      console.error("[LOGIN_COMPLETION] Error:", e)
       setError(e?.message || "Login completion failed");
     } finally {
       setIsLoading(false);

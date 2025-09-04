@@ -46,6 +46,7 @@ export function VerificationPopup({ onComplete, deviceId, userId, email }: Verif
 
       // Step 5: Redirect after short delay
       await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log("[VERIFICATION_POPUP] Calling onComplete")
       onComplete()
     } catch (error) {
       console.error("Verification failed:", error)
