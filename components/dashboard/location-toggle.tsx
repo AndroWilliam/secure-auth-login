@@ -66,26 +66,69 @@ export function LocationToggle() {
     }
   }
 
-  const requestLocationAccess = () => {
+  const requestLocationAccess = async () => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by this browser.")
       return
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        console.log("[v0] Location access granted:", position.coords)
-        setLocationEnabled(true)
-        setLocationStatus("granted")
-        localStorage.setItem("signup_location_status", "granted")
-      },
-      (error) => {
-        console.log("[v0] Location access denied:", error.message)
-        setLocationEnabled(false)
-        setLocationStatus("denied")
-        localStorage.setItem("signup_location_status", "denied")
-      },
-    )
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000,
+        })
+      })
+
+      console.log("[v0] Location access granted:", position.coords)
+      
+      // Get location details for display
+      const lat = position.coords.latitude
+      const lng = position.coords.longitude
+      
+      // Reverse geocode to get city/country
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`
+        )
+        const geoData = await response.json()
+        const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || "Unknown"
+        const country = geoData.address?.country || "Unknown"
+        
+        // Store location data
+        const locationData = {
+          city,
+          country,
+          coordinates: { lat, lng },
+          timestamp: new Date().toISOString()
+        }
+        
+        localStorage.setItem("current_location_data", JSON.stringify(locationData))
+      } catch (geoError) {
+        console.warn("Failed to get location name:", geoError)
+        // Still store coordinates even if reverse geocoding fails
+        const locationData = {
+          city: "Unknown",
+          country: "Unknown", 
+          coordinates: { lat, lng },
+          timestamp: new Date().toISOString()
+        }
+        localStorage.setItem("current_location_data", JSON.stringify(locationData))
+      }
+
+      setLocationEnabled(true)
+      setLocationStatus("granted")
+      localStorage.setItem("signup_location_status", "granted")
+      
+      // Trigger page refresh to update the location card
+      window.location.reload()
+    } catch (error) {
+      console.log("[v0] Location access denied:", error)
+      setLocationEnabled(false)
+      setLocationStatus("denied")
+      localStorage.setItem("signup_location_status", "denied")
+    }
   }
 
   const handleDisableLocation = () => {
