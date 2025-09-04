@@ -39,6 +39,20 @@ export function PhoneInput({ value, onChange, placeholder, className, id }: Phon
     countries.find((country) => country.code === "EG") || countries[0],
   )
 
+  // Per-country national number length (digits only, excluding country code)
+  const nationalNumberMaxLength: Record<string, number> = {
+    EG: 10, // Egypt
+    US: 10,
+    GB: 10,
+    CA: 10,
+    AU: 9,
+    DE: 11,
+    FR: 9,
+    AE: 9,
+    SA: 9,
+    IN: 10,
+  }
+
   // Extract the phone number without country code
   const getPhoneNumber = () => {
     if (value.startsWith(selectedCountry.dialCode)) {
@@ -50,11 +64,16 @@ export function PhoneInput({ value, onChange, placeholder, className, id }: Phon
   const handleCountrySelect = (country: Country) => {
     setSelectedCountry(country)
     const phoneNumber = getPhoneNumber()
-    onChange(`${country.dialCode} ${phoneNumber}`.trim())
+    // Enforce max length for new country
+    const maxLen = nationalNumberMaxLength[country.code] ?? 15
+    const digitsOnly = phoneNumber.replace(/\D/g, "").slice(0, maxLen)
+    onChange(`${country.dialCode} ${digitsOnly}`.trim())
   }
 
   const handlePhoneChange = (phoneNumber: string) => {
-    onChange(`${selectedCountry.dialCode} ${phoneNumber}`.trim())
+    const maxLen = nationalNumberMaxLength[selectedCountry.code] ?? 15
+    const digitsOnly = phoneNumber.replace(/\D/g, "").slice(0, maxLen)
+    onChange(`${selectedCountry.dialCode} ${digitsOnly}`.trim())
   }
 
   return (
@@ -88,7 +107,7 @@ export function PhoneInput({ value, onChange, placeholder, className, id }: Phon
       <Input
         id={id}
         type="tel"
-        placeholder={placeholder || "123 456 7890"}
+        placeholder={placeholder || "Enter phone number"}
         value={getPhoneNumber()}
         onChange={(e) => handlePhoneChange(e.target.value)}
         className={`rounded-l-none ${className || ""}`}

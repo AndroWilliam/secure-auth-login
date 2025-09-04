@@ -44,7 +44,7 @@ const SECURITY_QUESTIONS = [
 ]
 
 export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading }: LocationSecurityStepProps) {
-  const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "success" | "error">("idle")
+  const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "success" | "error" | "skipped">("idle")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
@@ -165,16 +165,12 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
 
-    data.securityQuestions.forEach((q, index) => {
-      if (!q.question || !q.answer.trim()) {
-        newErrors[`question${index}`] = "Both question and answer are required"
-      } else if (q.answer.trim().length < 3) {
-        newErrors[`question${index}`] = "Answer must be at least 3 characters long"
-      }
-    })
-
-    if (data.securityQuestions.length < 2) {
-      newErrors.general = "Please set up at least 2 security questions"
+    // Only one security question is required
+    const q = data.securityQuestions[0]
+    if (!q || !q.question || !q.answer?.trim()) {
+      newErrors[`question0`] = "Please select one question and provide an answer"
+    } else if (q.answer.trim().length < 3) {
+      newErrors[`question0`] = "Answer must be at least 3 characters long"
     }
 
     setErrors(newErrors)
@@ -271,6 +267,7 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
                           ...data,
                           locationVerified: false,
                         })
+                        setLocationStatus("skipped")
                       }}
                     >
                       Continue Without Location
@@ -287,6 +284,18 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
                   </Button>
                 </div>
               )}
+
+              {locationStatus === "skipped" && (
+                <div className="text-sm">
+                  <div className="flex items-center gap-2 text-amber-700 mb-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Location access denied; proceeding may reduce security.
+                  </div>
+                  <p className="text-muted-foreground mb-2 text-xs">
+                    You can continue setup without location. You may be asked for additional verification later.
+                  </p>
+                </div>
+              )}
             </div>
             {errors.location && <p className="text-sm text-destructive">{errors.location}</p>}
           </div>
@@ -298,21 +307,12 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
               <Label className="text-base font-medium">Security Questions</Label>
             </div>
 
-            {data.securityQuestions.map((sq, index) => (
+            {/* Only one security question */}
+            {data.securityQuestions.slice(0, 1).map((sq, index) => (
               <div key={index} className="space-y-3 p-4 border rounded-lg">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">Question {index + 1}</Label>
-                  {data.securityQuestions.length > 2 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSecurityQuestion(index)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      Remove
-                    </Button>
-                  )}
+                  {/* Remove ability to delete the only question */}
                 </div>
 
                 <Select
@@ -343,13 +343,7 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
               </div>
             ))}
 
-            {data.securityQuestions.length < 3 && (
-              <div className="pt-2">
-                <Button type="button" variant="outline" onClick={addSecurityQuestion}>
-                  Add Another Question
-                </Button>
-              </div>
-            )}
+            {/* Remove add another question */}
 
             {errors.general && <p className="text-sm text-destructive">{errors.general}</p>}
           </div>
