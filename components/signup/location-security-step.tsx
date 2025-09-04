@@ -50,9 +50,19 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
   useEffect(() => {
     generateDeviceId()
 
-    // Auto-request location on component mount
+    // Auto-request location on component mount with a small delay to ensure browser is ready
     if (!data.locationVerified) {
-      requestLocation()
+      console.log("Component mounted, checking location status...")
+      console.log("Current data.locationVerified:", data.locationVerified)
+      
+      // Add a small delay to ensure browser permission dialogs are processed
+      setTimeout(() => {
+        console.log("Auto-requesting location after delay...")
+        requestLocation()
+      }, 500)
+    } else {
+      console.log("Location already verified, skipping auto-request")
+      setLocationStatus("success")
     }
   }, [])
 
@@ -86,11 +96,31 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
   }
 
   const requestLocation = async () => {
+    console.log("requestLocation called, setting status to requesting")
     setLocationStatus("requesting")
 
     try {
       if (!navigator.geolocation) {
         throw new Error("Geolocation is not supported by this browser")
+      }
+
+      // Check if permission is already granted
+      if (navigator.permissions) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName })
+          console.log("Current geolocation permission state:", permission.state)
+          
+          if (permission.state === 'granted') {
+            console.log("Permission already granted, proceeding with location request")
+          } else if (permission.state === 'denied') {
+            console.log("Permission already denied, skipping location request")
+            setLocationStatus("error")
+            return
+          }
+        } catch (permError) {
+          console.log("Could not check permission state:", permError)
+          // Continue with location request anyway
+        }
       }
 
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -290,7 +320,15 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
                     instead.
                   </p>
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={requestLocation}>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        console.log("Try Again button clicked")
+                        requestLocation()
+                      }}
+                    >
                       Try Again
                     </Button>
                     <Button
@@ -314,9 +352,28 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
               {locationStatus === "idle" && (
                 <div className="text-sm">
                   <p className="text-muted-foreground mb-2">We need to verify your location for security purposes</p>
-                  <Button type="button" variant="outline" size="sm" onClick={requestLocation}>
-                    Verify Location
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={requestLocation}>
+                      Verify Location
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        console.log("Debug: Current locationStatus:", locationStatus)
+                        console.log("Debug: Current data.locationVerified:", data.locationVerified)
+                        console.log("Debug: Navigator geolocation available:", !!navigator.geolocation)
+                        if (navigator.permissions) {
+                          navigator.permissions.query({ name: 'geolocation' as PermissionName })
+                            .then(perm => console.log("Debug: Permission state:", perm.state))
+                            .catch(err => console.log("Debug: Permission check error:", err))
+                        }
+                      }}
+                    >
+                      Debug
+                    </Button>
+                  </div>
                 </div>
               )}
 
