@@ -52,14 +52,31 @@ export default async function DashboardPage() {
   const currentLocation = loginData?.locationData || loginData?.geo_location
   const currentDeviceId = loginData?.device_id
 
-  // Count unique devices
+  // Get device names from user agent strings
+  const getDeviceName = (deviceId: string) => {
+    // This is a simplified device detection - in a real app you'd store device names
+    if (deviceId.includes("server-side")) {
+      return "Current Device"
+    }
+    return "Unknown Device"
+  }
+
+  // Count unique devices and get their names
   const uniqueDevices = new Set()
-  if (signupDeviceId) uniqueDevices.add(signupDeviceId)
+  const deviceNames = new Set()
+  
+  if (signupDeviceId) {
+    uniqueDevices.add(signupDeviceId)
+    deviceNames.add("Signup Device")
+  }
+  
   allLoginEvents?.forEach(event => {
     if (event.event_data?.device_id) {
       uniqueDevices.add(event.event_data.device_id)
+      deviceNames.add(getDeviceName(event.event_data.device_id))
     }
   })
+
   const trustedDevicesCount = uniqueDevices.size
 
   // Format last login time
@@ -156,20 +173,21 @@ export default async function DashboardPage() {
                   <div className="flex-1">
                     <p className="font-medium">Location Verified</p>
                     <div className="text-sm text-muted-foreground space-y-1">
-                      {signupLocation && (
-                        <div>
-                          <p><strong>Signup Location:</strong> {signupLocation.city || 'Unknown'}, {signupLocation.country || 'Unknown'}</p>
-                          <p className="text-xs font-mono">Coords: {signupLocation.coordinates?.lat?.toFixed(6) || signupLocation.latitude?.toFixed(6) || 'N/A'}, {signupLocation.coordinates?.lng?.toFixed(6) || signupLocation.longitude?.toFixed(6) || 'N/A'}</p>
-                        </div>
-                      )}
-                      {currentLocation && (
+                      {currentLocation && (currentLocation.city !== 'Unknown' || currentLocation.country !== 'Unknown') ? (
                         <div>
                           <p><strong>Current Location:</strong> {currentLocation.city || 'Unknown'}, {currentLocation.country || 'Unknown'}</p>
                           <p className="text-xs font-mono">Coords: {currentLocation.coordinates?.lat?.toFixed(6) || currentLocation.latitude?.toFixed(6) || 'N/A'}, {currentLocation.coordinates?.lng?.toFixed(6) || currentLocation.longitude?.toFixed(6) || 'N/A'}</p>
                         </div>
-                      )}
-                      {!signupLocation && !currentLocation && (
-                        <p>Location data not available</p>
+                      ) : signupLocation && (signupLocation.city !== 'Unknown' || signupLocation.country !== 'Unknown') ? (
+                        <div>
+                          <p><strong>Signup Location:</strong> {signupLocation.city || 'Unknown'}, {signupLocation.country || 'Unknown'}</p>
+                          <p className="text-xs font-mono">Coords: {signupLocation.coordinates?.lat?.toFixed(6) || signupLocation.latitude?.toFixed(6) || 'N/A'}, {signupLocation.coordinates?.lng?.toFixed(6) || signupLocation.longitude?.toFixed(6) || 'N/A'}</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p><strong>Location Access Disabled</strong></p>
+                          <p className="text-xs">Enable location access in settings below to see your current location</p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -181,20 +199,22 @@ export default async function DashboardPage() {
                   <div className="flex-1">
                     <p className="font-medium">Device Verified</p>
                     <div className="text-sm text-muted-foreground space-y-1">
-                      {signupDeviceId && (
+                      {deviceNames.size > 0 ? (
                         <div>
-                          <p><strong>Signup Device ID:</strong></p>
-                          <p className="text-xs font-mono break-all">{signupDeviceId}</p>
+                          <p><strong>Trusted Devices ({trustedDevicesCount}):</strong></p>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {Array.from(deviceNames).map((deviceName, index) => (
+                              <span 
+                                key={index}
+                                className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
+                              >
+                                {deviceName}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      )}
-                      {currentDeviceId && (
-                        <div>
-                          <p><strong>Current Device ID:</strong></p>
-                          <p className="text-xs font-mono break-all">{currentDeviceId}</p>
-                        </div>
-                      )}
-                      {!signupDeviceId && !currentDeviceId && (
-                        <p>Device data not available</p>
+                      ) : (
+                        <p>No device data available</p>
                       )}
                     </div>
                   </div>
