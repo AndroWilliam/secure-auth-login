@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { Mail, ArrowLeft } from "lucide-react"
 
 interface OtpVerificationStepProps {
@@ -18,18 +17,22 @@ interface OtpVerificationStepProps {
 export function OtpVerificationStep({ onNext, onBack, isLoading, email, onResendOtp }: OtpVerificationStepProps) {
   const [otpCode, setOtpCode] = useState("")
   const [isResending, setIsResending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (otpCode.trim().length >= 4) {
-      onNext(otpCode.trim())
+  // Auto-verify when all 6 digits are entered
+  useEffect(() => {
+    if (otpCode.length === 6 && !isLoading) {
+      onNext(otpCode)
     }
-  }
+  }, [otpCode, isLoading, onNext])
 
   const handleResend = async () => {
     setIsResending(true)
+    setError(null)
     try {
       await onResendOtp()
+    } catch (err) {
+      setError("Failed to resend code. Please try again.")
     } finally {
       setIsResending(false)
     }
@@ -49,31 +52,36 @@ export function OtpVerificationStep({ onNext, onBack, isLoading, email, onResend
           <span className="text-sm font-medium text-blue-800">{email}</span>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="otp">Verification Code</Label>
-            <Input
-              id="otp"
-              type="text"
-              placeholder="Enter 6-digit code"
+        <div className="space-y-4">
+          <div className="flex justify-center">
+            <InputOTP
+              maxLength={6}
               value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="text-center text-lg tracking-widest"
+              onChange={(value) => {
+                setOtpCode(value)
+                if (error) setError(null)
+              }}
               disabled={isLoading}
-              autoComplete="off"
-              inputMode="numeric"
-              name="otp-verification"
-            />
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
           </div>
-
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={isLoading || otpCode.trim().length < 4}
-          >
-            {isLoading ? "Verifying..." : "Verify Code"}
-          </Button>
-        </form>
+          
+          {error && (
+            <p className="text-sm text-destructive text-center">{error}</p>
+          )}
+          
+          {isLoading && (
+            <p className="text-sm text-muted-foreground text-center">Verifying...</p>
+          )}
+        </div>
 
         <div className="text-center space-y-2">
           <p className="text-sm text-muted-foreground">
