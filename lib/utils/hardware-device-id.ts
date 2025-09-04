@@ -67,9 +67,10 @@ export function generateHardwareDeviceId(): HardwareDeviceInfo {
 
 /**
  * Create a stable device ID from hardware characteristics
+ * Uses only the most stable characteristics that don't change frequently
  */
 function createStableDeviceId(characteristics: HardwareDeviceInfo['characteristics']): string {
-  // Use the most stable characteristics for device identification
+  // Use only the most stable characteristics for device identification
   const stableData = [
     characteristics.platform,
     characteristics.screenResolution,
@@ -79,15 +80,11 @@ function createStableDeviceId(characteristics: HardwareDeviceInfo['characteristi
     characteristics.pixelRatio.toString(),
   ];
 
-  // Add user agent hash (first 8 characters of a hash)
-  const userAgentHash = btoa(characteristics.userAgent).slice(0, 8);
-  stableData.push(userAgentHash);
-
-  // Create a hash from stable data
+  // Create a hash from stable data only (no user agent or changing data)
   const combinedData = stableData.join('-');
-  const hash = btoa(combinedData).replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
+  const hash = btoa(combinedData).replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
   
-  return `hw-${hash}-${Date.now().toString(36)}`;
+  return `device-${hash}`;
 }
 
 /**

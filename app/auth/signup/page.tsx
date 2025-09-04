@@ -280,20 +280,34 @@ export default function SignupPage() {
             pixelRatio: window.devicePixelRatio || 1,
           };
 
+          // Get IP and timestamp from device response
+          const deviceResponse = await fetch("/api/device/generate-id", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+          
+          if (!deviceResponse.ok) {
+            throw new Error("Failed to generate device ID");
+          }
+          
+          const deviceData = await deviceResponse.json();
+
           await userInfoClient.storeEvent({
             event_type: "signup_completed",
             event_data: {
               userId,
               email: signupData.identity.email,
-              device_id: deviceId,
+              device_id: deviceId, // This is now the hardware fingerprint
               deviceInfo,
+              ipAddress: deviceData.ipAddress, // Collected for future use
+              timestamp: deviceData.timestamp, // Collected for future use
               locationData: signupData.location.locationData,
               geo_location: signupData.location.locationData?.coordinates ? {
                 latitude: signupData.location.locationData.coordinates.lat,
                 longitude: signupData.location.locationData.coordinates.lng,
                 radius: 50000
               } : null,
-              timestamp: new Date().toISOString(),
+              eventTimestamp: new Date().toISOString(),
             },
           })
         } catch (eventError) {

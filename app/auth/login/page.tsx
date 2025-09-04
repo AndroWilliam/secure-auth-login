@@ -247,13 +247,27 @@ export default function LoginPage() {
         pixelRatio: window.devicePixelRatio || 1,
       };
 
+      // Get IP and timestamp from device response
+      const deviceResponse = await fetch("/api/device/generate-id", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (!deviceResponse.ok) {
+        throw new Error("Failed to generate device ID");
+      }
+      
+      const deviceData = await deviceResponse.json();
+
       await userInfoClient.storeEvent({
         event_type: "login_completed",
         event_data: {
           userId: loginData.userId,
           email: loginData.email,
-          device_id: currentDeviceId,
+          device_id: currentDeviceId, // This is now the hardware fingerprint
           deviceInfo,
+          ipAddress: deviceData.ipAddress, // Collected for future use
+          timestamp: deviceData.timestamp, // Collected for future use
           locationData: currentLocationData,
           geo_location: coords ? {
             latitude: coords.lat,
@@ -267,7 +281,7 @@ export default function LoginPage() {
             recognizedLocation: true,
             additionalVerification: currentStep === 2,
           },
-          timestamp: new Date().toISOString(),
+          eventTimestamp: new Date().toISOString(),
         },
       });
 

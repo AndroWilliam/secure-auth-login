@@ -10,37 +10,27 @@ import { HardwareDeviceInfo, generateHardwareDeviceId, compareHardwareDeviceIds 
 export { getClientIp };
 
 export interface HybridDeviceId {
-  deviceId: string;
-  ipHash: string;
-  hardwareFingerprint: string;
-  persistentId: string;
-  timestamp: number;
+  deviceId: string; // This will be the hardware fingerprint
+  ipAddress: string; // Collected for future use
+  timestamp: number; // Collected for future use
+  hardwareFingerprint: string; // The actual device fingerprint
 }
 
 /**
- * Generate a hybrid device ID combining multiple identification methods
+ * Generate a device ID using hardware fingerprint as primary identifier
+ * Collects IP and timestamp for future use
  */
 export function generateHybridDeviceId(clientIp: string): HybridDeviceId {
   const hardwareInfo = generateHardwareDeviceId();
   
-  // Create IP hash (first 8 characters)
-  const ipHash = clientIp.replace(/\./g, '').slice(0, 8);
-  
-  // Create hardware fingerprint (first 12 characters)
-  const hardwareFingerprint = hardwareInfo.deviceId.slice(0, 12);
-  
-  // Create persistent ID from localStorage or generate new one
-  const persistentId = getOrCreatePersistentId();
-  
-  // Combine all identifiers
-  const deviceId = `hybrid-${ipHash}-${hardwareFingerprint}-${persistentId}`;
+  // Use hardware fingerprint as the primary device ID
+  const deviceId = hardwareInfo.deviceId;
   
   return {
-    deviceId,
-    ipHash,
-    hardwareFingerprint,
-    persistentId,
-    timestamp: Date.now()
+    deviceId, // This is the hardware fingerprint
+    ipAddress: clientIp, // Collected for future use
+    timestamp: Date.now(), // Collected for future use
+    hardwareFingerprint: hardwareInfo.deviceId // Same as deviceId for clarity
   };
 }
 
@@ -62,27 +52,11 @@ function getOrCreatePersistentId(): string {
 }
 
 /**
- * Compare two hybrid device IDs
+ * Compare two device IDs (hardware fingerprints)
  */
 export function compareHybridDeviceIds(device1: HybridDeviceId, device2: HybridDeviceId): boolean {
-  // Compare multiple aspects for reliability
-  
-  // 1. Check if persistent IDs match (most reliable)
-  if (device1.persistentId === device2.persistentId) {
-    return true;
-  }
-  
-  // 2. Check if hardware fingerprints match
-  if (device1.hardwareFingerprint === device2.hardwareFingerprint) {
-    return true;
-  }
-  
-  // 3. Check if IP hashes match (for same network)
-  if (device1.ipHash === device2.ipHash) {
-    return true;
-  }
-  
-  return false;
+  // Compare hardware fingerprints (primary method)
+  return device1.deviceId === device2.deviceId;
 }
 
 /**

@@ -17,12 +17,10 @@ export async function POST(req: NextRequest) {
     console.log("[GENERATE_DEVICE_ID] Generated hybrid device ID:", hybridDeviceId);
     
     return NextResponse.json({ 
-      deviceId: hybridDeviceId.deviceId,
-      ip: clientIp,
-      ipHash: hybridDeviceId.ipHash,
-      hardwareFingerprint: hybridDeviceId.hardwareFingerprint,
-      persistentId: hybridDeviceId.persistentId,
-      timestamp: new Date().toISOString()
+      deviceId: hybridDeviceId.deviceId, // This is the hardware fingerprint
+      ipAddress: hybridDeviceId.ipAddress, // Collected for future use
+      timestamp: hybridDeviceId.timestamp, // Collected for future use
+      hardwareFingerprint: hybridDeviceId.hardwareFingerprint // Same as deviceId
     }, { status: 200 });
     
   } catch (error: any) {
