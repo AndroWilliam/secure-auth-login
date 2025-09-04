@@ -264,8 +264,9 @@ export default function SignupPage() {
             throw new Error("Failed to generate device ID");
           }
           
-          const { deviceId } = await deviceResponse.json();
-          console.log("[SIGNUP] Using IP-based device ID for event:", deviceId);
+          const deviceData = await deviceResponse.json();
+          const { deviceId } = deviceData;
+          console.log("[SIGNUP] Using device ID for event:", deviceId);
           
           // Get device fingerprint information
           const deviceInfo = {
@@ -279,18 +280,6 @@ export default function SignupPage() {
             colorDepth: screen.colorDepth || 0,
             pixelRatio: window.devicePixelRatio || 1,
           };
-
-          // Get IP and timestamp from device response
-          const deviceResponse = await fetch("/api/device/generate-id", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          });
-          
-          if (!deviceResponse.ok) {
-            throw new Error("Failed to generate device ID");
-          }
-          
-          const deviceData = await deviceResponse.json();
 
           await userInfoClient.storeEvent({
             event_type: "signup_completed",

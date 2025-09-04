@@ -207,8 +207,9 @@ export default function LoginPage() {
         throw new Error("Failed to generate device ID");
       }
       
-      const { deviceId: currentDeviceId } = await deviceResponse.json();
-      console.log("[LOGIN_COMPLETION] Using IP-based device ID:", currentDeviceId);
+      const deviceData = await deviceResponse.json();
+      const { deviceId: currentDeviceId } = deviceData;
+      console.log("[LOGIN_COMPLETION] Using device ID:", currentDeviceId);
       
       const coords = await tryGetGeolocationSilently();
       
@@ -246,18 +247,6 @@ export default function LoginPage() {
         colorDepth: screen.colorDepth || 0,
         pixelRatio: window.devicePixelRatio || 1,
       };
-
-      // Get IP and timestamp from device response
-      const deviceResponse = await fetch("/api/device/generate-id", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      
-      if (!deviceResponse.ok) {
-        throw new Error("Failed to generate device ID");
-      }
-      
-      const deviceData = await deviceResponse.json();
 
       await userInfoClient.storeEvent({
         event_type: "login_completed",
