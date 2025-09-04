@@ -194,18 +194,55 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
     } catch (error) {
       console.error("Location error:", error)
       
-      // Check if it's a permission denied error
+      // Check if it's a geolocation error
       if (error instanceof GeolocationPositionError) {
         if (error.code === error.PERMISSION_DENIED) {
           console.log("Location permission explicitly denied by user")
+          setLocationStatus("error")
         } else if (error.code === error.POSITION_UNAVAILABLE) {
-          console.log("Location position unavailable")
+          console.log("Location position unavailable - this is not a permission issue")
+          // Try with less accurate settings as a fallback
+          console.log("Trying fallback location request with less accurate settings...")
+          try {
+            const fallbackPosition = await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: false, // Less accurate but more likely to work
+                timeout: 15000, // Longer timeout
+                maximumAge: 300000, // Accept cached location
+              })
+            })
+            
+            console.log("Fallback location request successful:", fallbackPosition.coords)
+            const lat = fallbackPosition.coords.latitude
+            const lng = fallbackPosition.coords.longitude
+            
+            const locationData = {
+              city: "Unknown",
+              country: "Unknown", 
+              coordinates: { lat, lng },
+            }
+
+            onDataChange({
+              ...data,
+              locationVerified: true,
+              locationData,
+            })
+            setLocationStatus("success")
+            return
+          } catch (fallbackError) {
+            console.log("Fallback location request also failed:", fallbackError)
+          }
+          
+          // If fallback also fails, allow user to continue
+          setLocationStatus("skipped")
         } else if (error.code === error.TIMEOUT) {
           console.log("Location request timed out")
+          setLocationStatus("error")
         }
+      } else {
+        // For other errors, treat as permission denied
+        setLocationStatus("error")
       }
-      
-      setLocationStatus("error")
     }
   }
 
@@ -381,10 +418,10 @@ export function LocationSecurityStep({ data, onDataChange, onComplete, isLoading
                 <div className="text-sm">
                   <div className="flex items-center gap-2 text-amber-700 mb-2">
                     <AlertTriangle className="h-4 w-4" />
-                    Location access denied; proceeding may reduce security.
+                    Location services unavailable
                   </div>
                   <p className="text-muted-foreground mb-2 text-xs">
-                    You can continue setup without location. You may be asked for additional verification later.
+                    We couldn't determine your location. This may be due to network issues or location services being disabled. You can continue setup without location verification.
                   </p>
                 </div>
               )}
