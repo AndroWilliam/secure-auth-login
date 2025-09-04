@@ -1,9 +1,31 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { CheckCircle } from "lucide-react"
-import Link from "next/link"
 
 export default function SignupSuccessPage() {
+  const router = useRouter()
+  const [countdown, setCountdown] = useState(10)
+
+  useEffect(() => {
+    // Start countdown
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          // Redirect to login page
+          router.push("/auth/login")
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    // Cleanup timer on component unmount
+    return () => clearInterval(timer)
+  }, [router])
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md mx-auto">
@@ -26,13 +48,10 @@ export default function SignupSuccessPage() {
             </ul>
           </div>
 
-          <div className="space-y-2">
-            <Button asChild className="w-full">
-              <Link href="/auth/login">Continue to Login</Link>
-            </Button>
-            <Button variant="outline" asChild className="w-full bg-transparent">
-              <Link href="/">Return to Home</Link>
-            </Button>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              Redirecting to login page in {countdown} seconds...
+            </p>
           </div>
         </CardContent>
       </Card>
