@@ -52,6 +52,19 @@ export default async function DashboardPage() {
   const currentLocation = loginData?.locationData || loginData?.geo_location
   const currentDeviceId = loginData?.device_id
 
+  // Check localStorage for current location data (from location toggle)
+  let storedLocationData = null
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('current_location_data')
+      if (stored) {
+        storedLocationData = JSON.parse(stored)
+      }
+    } catch (e) {
+      console.warn('Failed to parse stored location data:', e)
+    }
+  }
+
   // Get device names from user agent strings and device info
   const getDeviceName = (deviceId: string, eventData: any) => {
     // Try to extract device info from the event data
@@ -122,8 +135,18 @@ export default async function DashboardPage() {
       if (width <= 480) return "Mobile Device"
     }
     
-    // Final fallback
-    return "Unknown Device"
+    // Try to extract device info from device ID
+    if (deviceId && deviceId.startsWith('device-')) {
+      const hash = deviceId.replace('device-', '')
+      return `Device ${hash.slice(0, 4).toUpperCase()}`
+    }
+    
+    // Final fallback - try to be more descriptive
+    if (platform) {
+      return `${platform} Device`
+    }
+    
+    return "Computer"
   }
 
   // Count unique devices and get their names
@@ -145,6 +168,7 @@ export default async function DashboardPage() {
   })
 
   const trustedDevicesCount = uniqueDevices.size
+  const deviceNamesArray = Array.from(deviceNames)
 
   // Format last login time
   const formatLastLogin = (timestamp: string) => {
@@ -201,7 +225,7 @@ export default async function DashboardPage() {
               <Smartphone className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{trustedDevicesCount}</div>
+              <div className="text-2xl font-bold">{deviceNamesArray.filter(name => name !== 'Unknown Device').length}</div>
               <p className="text-xs text-muted-foreground">Devices recognized</p>
             </CardContent>
           </Card>
@@ -240,7 +264,12 @@ export default async function DashboardPage() {
                   <div className="flex-1">
                     <p className="font-medium">Location Verified</p>
                     <div className="text-sm text-muted-foreground space-y-1">
-                      {currentLocation && (currentLocation.city !== 'Unknown' || currentLocation.country !== 'Unknown') ? (
+                      {storedLocationData && (storedLocationData.city !== 'Unknown' || storedLocationData.country !== 'Unknown') ? (
+                        <div>
+                          <p><strong>Current Location:</strong> {storedLocationData.city || 'Unknown'}, {storedLocationData.country || 'Unknown'}</p>
+                          <p className="text-xs font-mono">Coords: {storedLocationData.coordinates?.lat?.toFixed(6) || 'N/A'}, {storedLocationData.coordinates?.lng?.toFixed(6) || 'N/A'}</p>
+                        </div>
+                      ) : currentLocation && (currentLocation.city !== 'Unknown' || currentLocation.country !== 'Unknown') ? (
                         <div>
                           <p><strong>Current Location:</strong> {currentLocation.city || 'Unknown'}, {currentLocation.country || 'Unknown'}</p>
                           <p className="text-xs font-mono">Coords: {currentLocation.coordinates?.lat?.toFixed(6) || currentLocation.latitude?.toFixed(6) || 'N/A'}, {currentLocation.coordinates?.lng?.toFixed(6) || currentLocation.longitude?.toFixed(6) || 'N/A'}</p>
@@ -266,11 +295,13 @@ export default async function DashboardPage() {
                   <div className="flex-1">
                     <p className="font-medium">Device Verified</p>
                     <div className="text-sm text-muted-foreground space-y-1">
-                      {deviceNames.size > 0 ? (
+                      {deviceNamesArray.length > 0 ? (
                         <div>
-                          <p><strong>Trusted Devices ({trustedDevicesCount}):</strong></p>
+                          <p><strong>Trusted Devices ({deviceNamesArray.length}):</strong></p>
                           <div className="flex flex-wrap gap-2 mt-1">
-                            {Array.from(deviceNames).map((deviceName, index) => (
+                            {deviceNamesArray
+                              .filter(name => name !== 'Unknown Device') // Remove unknown devices
+                              .map((deviceName, index) => (
                               <span 
                                 key={index}
                                 className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
