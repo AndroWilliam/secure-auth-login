@@ -60,33 +60,70 @@ export default async function DashboardPage() {
     // Check for common device patterns in user agent or device info
     const userAgent = deviceInfo.userAgent || ""
     const platform = deviceInfo.platform || ""
+    const screenResolution = deviceInfo.screenResolution || ""
     
-    if (userAgent.includes("iPhone") || userAgent.includes("Mobile")) {
+    // iPhone detection with model
+    if (userAgent.includes("iPhone")) {
+      if (userAgent.includes("iPhone15,2") || userAgent.includes("iPhone15,3")) return "iPhone 14 Pro"
+      if (userAgent.includes("iPhone15,4") || userAgent.includes("iPhone15,5")) return "iPhone 14"
+      if (userAgent.includes("iPhone14,7") || userAgent.includes("iPhone14,8")) return "iPhone 13"
+      if (userAgent.includes("iPhone13,1") || userAgent.includes("iPhone13,2")) return "iPhone 12"
+      if (userAgent.includes("iPhone12,1") || userAgent.includes("iPhone12,3")) return "iPhone 11"
       return "iPhone"
-    } else if (userAgent.includes("iPad")) {
+    }
+    
+    // iPad detection
+    if (userAgent.includes("iPad")) {
+      if (userAgent.includes("iPad13,")) return "iPad Air"
+      if (userAgent.includes("iPad14,")) return "iPad mini"
       return "iPad"
-    } else if (userAgent.includes("Android")) {
-      return "Android Device"
-    } else if (userAgent.includes("Macintosh") || userAgent.includes("Mac OS")) {
-      return "MacBook"
-    } else if (userAgent.includes("Windows")) {
-      return "Windows PC"
-    } else if (userAgent.includes("Linux")) {
-      return "Linux PC"
-    } else if (platform.includes("Mac")) {
-      return "MacBook"
-    } else if (platform.includes("Win")) {
-      return "Windows PC"
-    } else if (platform.includes("Linux")) {
-      return "Linux PC"
-    } else if (platform.includes("iPhone")) {
-      return "iPhone"
-    } else if (platform.includes("Android")) {
+    }
+    
+    // Android detection with model hints
+    if (userAgent.includes("Android")) {
+      if (userAgent.includes("SM-")) return "Samsung Galaxy"
+      if (userAgent.includes("Pixel")) return "Google Pixel"
+      if (userAgent.includes("OnePlus")) return "OnePlus"
       return "Android Device"
     }
     
-    // Fallback to device ID hash for uniqueness
-    return `Device ${deviceId.slice(-4).toUpperCase()}`
+    // Mac detection with model hints
+    if (userAgent.includes("Macintosh") || userAgent.includes("Mac OS") || platform.includes("Mac")) {
+      if (userAgent.includes("MacBookAir")) return "MacBook Air"
+      if (userAgent.includes("MacBookPro")) return "MacBook Pro"
+      if (userAgent.includes("MacBook")) return "MacBook"
+      if (userAgent.includes("iMac")) return "iMac"
+      if (userAgent.includes("Mac Pro")) return "Mac Pro"
+      if (userAgent.includes("Mac mini")) return "Mac mini"
+      return "Mac"
+    }
+    
+    // Windows detection
+    if (userAgent.includes("Windows") || platform.includes("Win")) {
+      if (userAgent.includes("Windows NT 10.0")) return "Windows 10/11 PC"
+      if (userAgent.includes("Windows NT 6.3")) return "Windows 8.1 PC"
+      if (userAgent.includes("Windows NT 6.1")) return "Windows 7 PC"
+      return "Windows PC"
+    }
+    
+    // Linux detection
+    if (userAgent.includes("Linux") || platform.includes("Linux")) {
+      if (userAgent.includes("Ubuntu")) return "Ubuntu PC"
+      if (userAgent.includes("Fedora")) return "Fedora PC"
+      if (userAgent.includes("Debian")) return "Debian PC"
+      return "Linux PC"
+    }
+    
+    // Fallback based on screen resolution for better naming
+    if (screenResolution) {
+      const [width, height] = screenResolution.split('x').map(Number)
+      if (width >= 1920 && height >= 1080) return "Desktop Computer"
+      if (width >= 768 && height >= 1024) return "Tablet"
+      if (width <= 480) return "Mobile Device"
+    }
+    
+    // Final fallback
+    return "Unknown Device"
   }
 
   // Count unique devices and get their names

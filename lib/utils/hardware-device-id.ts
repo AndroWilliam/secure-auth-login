@@ -80,11 +80,21 @@ function createStableDeviceId(characteristics: HardwareDeviceInfo['characteristi
     characteristics.pixelRatio.toString(),
   ];
 
-  // Create a hash from stable data only (no user agent or changing data)
+  // Create a consistent hash from stable data
   const combinedData = stableData.join('-');
-  const hash = btoa(combinedData).replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
   
-  return `device-${hash}`;
+  // Use a simple hash function that's consistent
+  let hash = 0;
+  for (let i = 0; i < combinedData.length; i++) {
+    const char = combinedData.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Convert to positive hex string
+  const hexHash = Math.abs(hash).toString(16).slice(0, 8);
+  
+  return `device-${hexHash}`;
 }
 
 /**
