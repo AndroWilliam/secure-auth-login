@@ -70,7 +70,7 @@ export function generateHardwareDeviceId(): HardwareDeviceInfo {
  * Uses only the most stable characteristics that don't change frequently
  */
 function createStableDeviceId(characteristics: HardwareDeviceInfo['characteristics']): string {
-  // Use only the most stable characteristics for device identification
+  // Use multiple characteristics for device identification
   const stableData = [
     characteristics.platform,
     characteristics.screenResolution,
@@ -78,6 +78,10 @@ function createStableDeviceId(characteristics: HardwareDeviceInfo['characteristi
     characteristics.maxTouchPoints.toString(),
     characteristics.colorDepth.toString(),
     characteristics.pixelRatio.toString(),
+    characteristics.userAgent.substring(0, 50), // First 50 chars for distinction
+    characteristics.timezone,
+    characteristics.language,
+    characteristics.deviceMemory?.toString() || 'unknown',
   ];
 
   // Create a consistent hash from stable data

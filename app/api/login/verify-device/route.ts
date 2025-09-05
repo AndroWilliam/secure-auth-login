@@ -3,48 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { compareHybridDeviceIds, getClientIp, HybridDeviceId } from "@/lib/utils/hybrid-device-id";
-
-// Helper function to parse hybrid device ID
-function parseHybridDeviceId(deviceId: string): HybridDeviceId {
-  // Handle hybrid format: hybrid-{ipHash}-{hardwareFingerprint}-{persistentId}
-  if (deviceId.startsWith('hybrid-')) {
-    const withoutPrefix = deviceId.substring(7); // Remove 'hybrid-'
-    const parts = withoutPrefix.split('-');
-    
-    if (parts.length >= 3) {
-      // For format like: ::1-server-side--server-side
-      // We need to handle the case where IP might contain colons
-      let ipHash = parts[0];
-      let hardwareFingerprint = parts[1];
-      let persistentId = parts.slice(2).join('-');
-      
-      // Special handling for IPv6 addresses like ::1
-      if (parts[0] === '::1' || parts[0].includes(':')) {
-        ipHash = parts[0];
-        hardwareFingerprint = parts[1];
-        persistentId = parts.slice(2).join('-');
-      }
-      
-      return {
-        deviceId,
-        ipHash,
-        hardwareFingerprint,
-        persistentId,
-        timestamp: Date.now()
-      };
-    }
-  }
-  
-  // Fallback for non-hybrid device IDs (old UUID format)
-  return {
-    deviceId,
-    ipHash: 'unknown',
-    hardwareFingerprint: 'unknown',
-    persistentId: 'unknown',
-    timestamp: Date.now()
-  };
-}
+import { getClientIp } from "@/lib/utils/hybrid-device-id";
 
 export async function POST(req: NextRequest) {
   try {
@@ -91,61 +50,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ device_ok: false, action: "send_email_otp", email: email || undefined }, { status: 200 });
     }
 
-    // Compare device IDs using hybrid comparison
+    // Compare device IDs - our device IDs are hardware fingerprints
     const currentIp = getClientIp(req);
     
-    // Parse stored device ID to extract components
-    const storedDeviceComponents = parseHybridDeviceId(storedDeviceId);
-    const currentDeviceComponents = parseHybridDeviceId(deviceId);
+    console.log("[LOGIN_VERIFY_DEVICE] Comparing device IDs:", {
+      stored: storedDeviceId,
+      current: deviceId,
+      clientIp: currentIp
+    });
     
-    // Special handling for old UUID format device IDs
+    // Direct comparison of hardware fingerprints
+    // Device IDs should be different for different devices (laptop vs mobile)
     let device_ok = false;
     
-    if (storedDeviceId.startsWith('hybrid-') && deviceId.startsWith('hybrid-')) {
-      // Both are hybrid format - use normal comparison
-      device_ok = compareHybridDeviceIds(storedDeviceComponents, currentDeviceComponents);
-    } else if (!storedDeviceId.startsWith('hybrid-') && deviceId.startsWith('hybrid-')) {
-      // Stored is old UUID, current is hybrid - this is a migration case
-      // For now, we'll allow this and update the stored device ID
-      console.log("[LOGIN_VERIFY_DEVICE] Migrating from old UUID to hybrid device ID");
-      device_ok = true; // Allow login and we'll update the stored ID
-    } else {
-      // Both are old format or other cases
+    if (storedDeviceId && deviceId) {
+      // Compare the device IDs directly
       device_ok = storedDeviceId === deviceId;
+      console.log("[LOGIN_VERIFY_DEVICE] Device ID comparison result:", device_ok);
+    } else {
+      console.log("[LOGIN_VERIFY_DEVICE] Missing device ID data");
+      device_ok = false;
     }
     
     console.log("[LOGIN_VERIFY_DEVICE] Device comparison:", { 
       storedDeviceId, 
       currentDeviceId: deviceId, 
       currentIp,
-      storedComponents: storedDeviceComponents,
-      currentComponents: currentDeviceComponents,
       device_ok 
     });
 
     if (!device_ok) {
       console.log("[LOGIN_VERIFY_DEVICE] Device mismatch - triggering OTP");
       return NextResponse.json({ device_ok: false, action: "send_email_otp", email: email || undefined }, { status: 200 });
-    }
-
-    // If this was a migration case, update the stored device ID
-    if (!storedDeviceId.startsWith('hybrid-') && deviceId.startsWith('hybrid-')) {
-      try {
-        console.log("[LOGIN_VERIFY_DEVICE] Updating stored device ID to hybrid format");
-        await supabase
-          .from("user_info_events")
-          .update({
-            event_data: {
-              ...signupEvent.event_data,
-              device_id: deviceId
-            }
-          })
-          .eq("id", signupEvent.id);
-        console.log("[LOGIN_VERIFY_DEVICE] Successfully updated device ID in database");
-      } catch (updateError) {
-        console.warn("[LOGIN_VERIFY_DEVICE] Failed to update device ID:", updateError);
-        // Don't fail the login for this
-      }
     }
 
     console.log("[LOGIN_VERIFY_DEVICE] Device verified successfully");
