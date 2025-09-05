@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Shield, MapPin, Smartphone, Clock } from "lucide-react"
 import { LocationToggle } from "@/components/dashboard/location-toggle"
+import { LocationDisplay } from "@/components/dashboard/location-display"
 
 export default async function DashboardPage() {
   const supabase = await createServerClient()
@@ -308,22 +309,10 @@ export default async function DashboardPage() {
                   <div className="flex-1">
                     <p className="font-medium">Location Verified</p>
                     <div className="text-sm text-muted-foreground space-y-1">
-                      {currentLocation && (currentLocation.city !== 'Unknown' || currentLocation.country !== 'Unknown') ? (
-                        <div>
-                          <p><strong>Current Location:</strong> {currentLocation.city || 'Unknown'}, {currentLocation.country || 'Unknown'}</p>
-                          <p className="text-xs font-mono">Coords: {currentLocation.coordinates?.lat?.toFixed(6) || currentLocation.latitude?.toFixed(6) || 'N/A'}, {currentLocation.coordinates?.lng?.toFixed(6) || currentLocation.longitude?.toFixed(6) || 'N/A'}</p>
-                        </div>
-                      ) : signupLocation && (signupLocation.city !== 'Unknown' || signupLocation.country !== 'Unknown') ? (
-                        <div>
-                          <p><strong>Signup Location:</strong> {signupLocation.city || 'Unknown'}, {signupLocation.country || 'Unknown'}</p>
-                          <p className="text-xs font-mono">Coords: {signupLocation.coordinates?.lat?.toFixed(6) || signupLocation.latitude?.toFixed(6) || 'N/A'}, {signupLocation.coordinates?.lng?.toFixed(6) || signupLocation.longitude?.toFixed(6) || 'N/A'}</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <p><strong>Location Access Disabled</strong></p>
-                          <p className="text-xs">Enable location access in settings below to see your current location</p>
-                        </div>
-                      )}
+                      <LocationDisplay 
+                        signupLocation={signupLocation}
+                        currentLocation={currentLocation}
+                      />
                     </div>
                   </div>
                   <span className="text-sm text-muted-foreground">Just now</span>

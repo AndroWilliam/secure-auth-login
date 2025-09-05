@@ -45,8 +45,44 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
       await new Promise(resolve => setTimeout(resolve, 500))
       setIsComplete(true)
 
-      // Step 5: Redirect directly to dashboard
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Step 5: Store minimal login completion data
+      try {
+        const coords = await getCurrentPosition()
+        if (coords) {
+          // Store current location for dashboard display
+          const locationData = {
+            city: "Current Location", // We'll get the actual city via reverse geocoding
+            country: "Current Location",
+            coordinates: { lat: coords.latitude, lng: coords.longitude },
+            timestamp: new Date().toISOString()
+          }
+          localStorage.setItem("current_location_data", JSON.stringify(locationData))
+          
+          // Try reverse geocoding
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=10&addressdetails=1`
+            )
+            const geoData = await response.json()
+            const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || "Unknown"
+            const country = geoData.address?.country || "Unknown"
+            
+            const updatedLocationData = {
+              ...locationData,
+              city,
+              country
+            }
+            localStorage.setItem("current_location_data", JSON.stringify(updatedLocationData))
+          } catch (geoError) {
+            console.warn("Failed to get location name:", geoError)
+          }
+        }
+      } catch (locationError) {
+        console.warn("Failed to get current location:", locationError)
+      }
+      
+      // Step 6: Redirect directly to dashboard
+      await new Promise(resolve => setTimeout(resolve, 500))
       console.log("[VERIFICATION_POPUP] Redirecting directly to dashboard")
       
       // Skip complex login completion and redirect directly
@@ -119,6 +155,28 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
         setStatus(prev => ({ ...prev, location: true }))
         resolve()
       }, 1500)
+    })
+  }
+
+  const getCurrentPosition = (): Promise<GeolocationPosition['coords'] | null> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null)
+        return
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve(position.coords),
+        (error) => {
+          console.warn("Failed to get position:", error)
+          resolve(null)
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 300000,
+        }
+      )
     })
   }
 
