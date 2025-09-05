@@ -19,6 +19,13 @@ import { IdentitySetupStep } from "@/components/signup/identity-setup-step"
 import { VerificationStep } from "@/components/signup/verification-step"
 import { LocationSecurityStep } from "@/components/signup/location-security-step"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface SignupData {
   identity: {
@@ -51,6 +58,29 @@ export default function SignupPage() {
   const supabase = createClient()
   const [accountCreated, setAccountCreated] = useState(false)
   const [createdUserId, setCreatedUserId] = useState<string | null>(null)
+  const [showEmailExistsAlert, setShowEmailExistsAlert] = useState(false)
+
+  // Check if email already exists
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      // Try to sign in with a dummy password to check if email exists
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: "dummy-password-to-check-email"
+      })
+      
+      // If we get "Invalid login credentials", the email exists but password is wrong
+      // If we get "User not found", the email doesn't exist
+      if (error?.message?.includes("Invalid login credentials")) {
+        return true // Email exists
+      }
+      
+      return false // Email doesn't exist
+    } catch (error) {
+      console.error("Error checking email:", error)
+      return false // Assume email doesn't exist on error
+    }
+  }
 
   const [signupData, setSignupData] = useState<SignupData>({
     identity: {
@@ -191,6 +221,18 @@ export default function SignupPage() {
   
       // If account wasn't created during OTP verify, create it now.
       if (!accountCreated) {
+        // Check if email already exists before creating account
+        const emailExists = await checkEmailExists(signupData.identity.email)
+        if (emailExists) {
+          setShowEmailExistsAlert(true)
+          // Hide alert after 5 seconds
+          setTimeout(() => {
+            setShowEmailExistsAlert(false)
+            setCurrentStep(1) // Go back to step 1
+          }, 5000)
+          return
+        }
+
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: signupData.identity.email,
           password: signupData.identity.password,
@@ -334,9 +376,21 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <SignupProgress currentStep={currentStep} totalSteps={3} />
+    <>
+      <AlertDialog open={showEmailExistsAlert} onOpenChange={setShowEmailExistsAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Email Already Registered</AlertDialogTitle>
+            <AlertDialogDescription>
+              This email address already has an account. Please use a different email address or sign in with your existing account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-lg">
+          <SignupProgress currentStep={currentStep} totalSteps={3} />
 
         {error && (
           <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -384,5 +438,6 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

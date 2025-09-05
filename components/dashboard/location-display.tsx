@@ -20,14 +20,19 @@ export function LocationDisplay({ signupLocation, currentLocation }: LocationDis
     // Check localStorage for current location data (from location toggle)
     try {
       const stored = localStorage.getItem('current_location_data')
+      console.log('[LOCATION_DISPLAY] Stored location data:', stored)
       if (stored) {
         const locationData = JSON.parse(stored)
+        console.log('[LOCATION_DISPLAY] Parsed location data:', locationData)
         setStoredLocation(locationData)
       }
     } catch (e) {
       console.warn('Failed to parse stored location data:', e)
     }
   }, [])
+
+  console.log('[LOCATION_DISPLAY] Props:', { signupLocation, currentLocation })
+  console.log('[LOCATION_DISPLAY] State:', { storedLocation })
 
   // Priority: storedLocation > currentLocation > signupLocation
   const displayLocation = storedLocation && (storedLocation.city !== 'Unknown' || storedLocation.country !== 'Unknown') 
