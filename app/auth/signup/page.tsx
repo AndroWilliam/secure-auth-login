@@ -108,7 +108,20 @@ export default function SignupPage() {
     setError(null)
 
     try {
-      console.log("[v0] Sending OTP to:", signupData.identity.email)
+      // Check if email already exists before proceeding to OTP step
+      console.log("[v0] Checking if email exists:", signupData.identity.email)
+      const emailExists = await checkEmailExists(signupData.identity.email)
+      if (emailExists) {
+        setShowEmailExistsAlert(true)
+        // Hide alert after 5 seconds and stay on current step
+        setTimeout(() => {
+          setShowEmailExistsAlert(false)
+        }, 5000)
+        setIsLoading(false)
+        return
+      }
+
+      console.log("[v0] Email is available, sending OTP to:", signupData.identity.email)
       const response = await fetch("/api/auth/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -221,18 +234,6 @@ export default function SignupPage() {
   
       // If account wasn't created during OTP verify, create it now.
       if (!accountCreated) {
-        // Check if email already exists before creating account
-        const emailExists = await checkEmailExists(signupData.identity.email)
-        if (emailExists) {
-          setShowEmailExistsAlert(true)
-          // Hide alert after 5 seconds
-          setTimeout(() => {
-            setShowEmailExistsAlert(false)
-            setCurrentStep(1) // Go back to step 1
-          }, 5000)
-          return
-        }
-
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: signupData.identity.email,
           password: signupData.identity.password,
