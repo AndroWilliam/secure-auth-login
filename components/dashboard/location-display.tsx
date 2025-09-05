@@ -17,18 +17,27 @@ export function LocationDisplay({ signupLocation, currentLocation }: LocationDis
   const [storedLocation, setStoredLocation] = useState<LocationData | null>(null)
 
   useEffect(() => {
-    // Check localStorage for current location data (from location toggle)
-    try {
-      const stored = localStorage.getItem('current_location_data')
-      console.log('[LOCATION_DISPLAY] Stored location data:', stored)
-      if (stored) {
-        const locationData = JSON.parse(stored)
-        console.log('[LOCATION_DISPLAY] Parsed location data:', locationData)
-        setStoredLocation(locationData)
+    // Check secure session for current location data
+    const fetchLocationData = async () => {
+      try {
+        const { getItem, migrateFromLocalStorage } = await import("@/lib/utils/secure-session");
+        
+        // First try to migrate any existing localStorage data
+        await migrateFromLocalStorage('current_location_data', 72);
+        
+        // Then get from secure session
+        const locationData = await getItem('current_location_data');
+        console.log('[LOCATION_DISPLAY] Secure location data:', locationData);
+        
+        if (locationData) {
+          setStoredLocation(locationData);
+        }
+      } catch (e) {
+        console.warn('[LOCATION_DISPLAY] Failed to get secure location data:', e);
       }
-    } catch (e) {
-      console.warn('Failed to parse stored location data:', e)
-    }
+    };
+    
+    fetchLocationData();
   }, [])
 
   console.log('[LOCATION_DISPLAY] Props:', { signupLocation, currentLocation })

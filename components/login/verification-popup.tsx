@@ -63,7 +63,13 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
             coordinates: { lat: coords.latitude, lng: coords.longitude },
             timestamp: new Date().toISOString()
           }
-          localStorage.setItem("current_location_data", JSON.stringify(locationData))
+          // Store location data securely on server-side
+          try {
+            const { setItem } = await import("@/lib/utils/secure-session");
+            await setItem("current_location_data", locationData, 72); // 3 days expiry
+          } catch (error) {
+            console.warn("[VERIFICATION_POPUP] Failed to store location securely:", error);
+          }
           
           // Try reverse geocoding with timeout
           try {
@@ -87,7 +93,13 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
                 city,
                 country
               }
-              localStorage.setItem("current_location_data", JSON.stringify(updatedLocationData))
+              // Store updated location data securely
+              try {
+                const { setItem } = await import("@/lib/utils/secure-session");
+                await setItem("current_location_data", updatedLocationData, 72); // 3 days expiry
+              } catch (error) {
+                console.warn("[VERIFICATION_POPUP] Failed to store updated location securely:", error);
+              }
               console.log("[VERIFICATION_POPUP] Location updated:", city, country)
             } else {
               console.warn("[VERIFICATION_POPUP] Reverse geocoding failed:", response.status)

@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     console.log("[GENERATE_DEVICE_ID] Client IP:", clientIp);
     
     // Generate hybrid device ID
-    const hybridDeviceId = generateHybridDeviceId(clientIp);
+    const hybridDeviceId = await generateHybridDeviceId(clientIp);
     console.log("[GENERATE_DEVICE_ID] Generated hybrid device ID:", hybridDeviceId);
     
     return NextResponse.json({ 

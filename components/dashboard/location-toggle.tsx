@@ -28,9 +28,15 @@ export function LocationToggle() {
         return
       }
 
-      // Check if location was previously granted during signup
-      const signupLocationStatus = localStorage.getItem("signup_location_status")
-      const currentLocationData = localStorage.getItem("current_location_data")
+      // Check if location was previously granted during signup (with secure session migration)
+      const { getItem, migrateFromLocalStorage, getItemFallback } = await import("@/lib/utils/secure-session");
+      
+      // Migrate legacy localStorage data
+      await migrateFromLocalStorage("signup_location_status", 168); // 7 days
+      await migrateFromLocalStorage("current_location_data", 72); // 3 days
+      
+      const signupLocationStatus = await getItem("signup_location_status") || getItemFallback("signup_location_status");
+      const currentLocationData = await getItem("current_location_data") || getItemFallback("current_location_data");
       
       if (signupLocationStatus === "granted" || currentLocationData) {
         setLocationEnabled(true)
@@ -40,22 +46,27 @@ export function LocationToggle() {
         setLocationStatus("denied")
       } else {
         // Check current permission status
-        navigator.permissions
-          ?.query({ name: "geolocation" })
-          .then((result) => {
-            if (result.state === "granted") {
-              setLocationEnabled(true)
-              setLocationStatus("granted")
-              localStorage.setItem("signup_location_status", "granted")
-            } else {
-              setLocationEnabled(false)
-              setLocationStatus("denied")
+        try {
+          const result = await navigator.permissions?.query({ name: "geolocation" });
+          if (result?.state === "granted") {
+            setLocationEnabled(true)
+            setLocationStatus("granted")
+            // Store status securely
+            try {
+              const { setItem } = await import("@/lib/utils/secure-session");
+              await setItem("signup_location_status", "granted", 168); // 7 days
+            } catch (error) {
+              console.warn("Failed to store location status securely:", error);
             }
-          })
-          .catch(() => {
+          } else {
             setLocationEnabled(false)
             setLocationStatus("denied")
-          })
+          }
+        } catch (error) {
+          console.warn("Permission query failed:", error);
+          setLocationEnabled(false)
+          setLocationStatus("denied")
+        }
       }
     }
 
@@ -108,7 +119,13 @@ export function LocationToggle() {
           timestamp: new Date().toISOString()
         }
         
-        localStorage.setItem("current_location_data", JSON.stringify(locationData))
+        // Store location data securely
+        try {
+          const { setItem } = await import("@/lib/utils/secure-session");
+          await setItem("current_location_data", locationData, 72); // 3 days
+        } catch (error) {
+          console.warn("Failed to store location data securely:", error);
+        }
       } catch (geoError) {
         console.warn("Failed to get location name:", geoError)
         // Still store coordinates even if reverse geocoding fails
@@ -118,12 +135,24 @@ export function LocationToggle() {
           coordinates: { lat, lng },
           timestamp: new Date().toISOString()
         }
-        localStorage.setItem("current_location_data", JSON.stringify(locationData))
+        // Store location data securely
+        try {
+          const { setItem } = await import("@/lib/utils/secure-session");
+          await setItem("current_location_data", locationData, 72); // 3 days
+        } catch (error) {
+          console.warn("Failed to store location data securely:", error);
+        }
       }
 
       setLocationEnabled(true)
       setLocationStatus("granted")
-      localStorage.setItem("signup_location_status", "granted")
+      // Store status securely
+    try {
+      const { setItem } = await import("@/lib/utils/secure-session");
+      await setItem("signup_location_status", "granted", 168); // 7 days
+    } catch (error) {
+      console.warn("Failed to store location status securely:", error);
+    }
       
       // Trigger page refresh to update the location card
       window.location.reload()
@@ -131,15 +160,33 @@ export function LocationToggle() {
       console.log("[v0] Location access denied:", error)
       setLocationEnabled(false)
       setLocationStatus("denied")
-      localStorage.setItem("signup_location_status", "denied")
+      // Store status securely
+    try {
+      const { setItem } = await import("@/lib/utils/secure-session");
+      await setItem("signup_location_status", "denied", 168); // 7 days
+    } catch (error) {
+      console.warn("Failed to store location status securely:", error);
+    }
     }
   }
 
   const handleDisableLocation = () => {
     setLocationEnabled(false)
     setLocationStatus("denied")
-    localStorage.setItem("signup_location_status", "denied")
-    localStorage.removeItem("current_location_data")
+    // Store status securely
+    try {
+      const { setItem } = await import("@/lib/utils/secure-session");
+      await setItem("signup_location_status", "denied", 168); // 7 days
+    } catch (error) {
+      console.warn("Failed to store location status securely:", error);
+    }
+    // Remove location data securely
+    try {
+      const { removeItem } = await import("@/lib/utils/secure-session");
+      await removeItem("current_location_data");
+    } catch (error) {
+      console.warn("Failed to remove location data securely:", error);
+    }
     setShowDisableDialog(false)
     console.log("[v0] Location access disabled by user")
     
