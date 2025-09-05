@@ -31,21 +31,28 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
 
   const performVerifications = async () => {
     try {
+      console.log("[VERIFICATION_POPUP] Starting verification process")
+      
       // Step 1: Verify Device ID (simulate delay)
+      console.log("[VERIFICATION_POPUP] Step 1: Verifying device ID")
       await new Promise(resolve => setTimeout(resolve, 1500))
       setStatus(prev => ({ ...prev, deviceId: true }))
 
       // Step 2: Request location permission
+      console.log("[VERIFICATION_POPUP] Step 2: Requesting location permission")
       await requestLocationPermission()
       
       // Step 3: Verify location after permission is granted
+      console.log("[VERIFICATION_POPUP] Step 3: Verifying location")
       await verifyLocation()
 
       // Step 4: Complete verification
+      console.log("[VERIFICATION_POPUP] Step 4: Completing verification")
       await new Promise(resolve => setTimeout(resolve, 500))
       setIsComplete(true)
 
       // Step 5: Store minimal login completion data
+      console.log("[VERIFICATION_POPUP] Step 5: Storing location data")
       try {
         const coords = await getCurrentPosition()
         if (coords) {
@@ -58,23 +65,35 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
           }
           localStorage.setItem("current_location_data", JSON.stringify(locationData))
           
-          // Try reverse geocoding
+          // Try reverse geocoding with timeout
           try {
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=10&addressdetails=1`
-            )
-            const geoData = await response.json()
-            const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || "Unknown"
-            const country = geoData.address?.country || "Unknown"
+            console.log("[VERIFICATION_POPUP] Attempting reverse geocoding")
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
             
-            const updatedLocationData = {
-              ...locationData,
-              city,
-              country
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=10&addressdetails=1`,
+              { signal: controller.signal }
+            )
+            clearTimeout(timeoutId)
+            
+            if (response.ok) {
+              const geoData = await response.json()
+              const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || "Unknown"
+              const country = geoData.address?.country || "Unknown"
+              
+              const updatedLocationData = {
+                ...locationData,
+                city,
+                country
+              }
+              localStorage.setItem("current_location_data", JSON.stringify(updatedLocationData))
+              console.log("[VERIFICATION_POPUP] Location updated:", city, country)
+            } else {
+              console.warn("[VERIFICATION_POPUP] Reverse geocoding failed:", response.status)
             }
-            localStorage.setItem("current_location_data", JSON.stringify(updatedLocationData))
           } catch (geoError) {
-            console.warn("Failed to get location name:", geoError)
+            console.warn("[VERIFICATION_POPUP] Failed to get location name:", geoError)
           }
         }
       } catch (locationError) {
@@ -93,14 +112,25 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
         window.location.href = "/dashboard"
       }
     } catch (error) {
-      console.error("Verification failed:", error)
+      console.error("[VERIFICATION_POPUP] Verification failed:", error)
+      console.error("[VERIFICATION_POPUP] Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined
+      })
       // Still complete to avoid blocking user
       setIsComplete(true)
       setTimeout(() => {
-        if (onDirectRedirect) {
-          onDirectRedirect()
-        } else {
-          window.location.href = "/dashboard"
+        console.log("[VERIFICATION_POPUP] Redirecting directly to dashboard after error")
+        try {
+          if (onDirectRedirect) {
+            onDirectRedirect()
+          } else {
+            window.location.href = "/dashboard"
+          }
+        } catch (redirectError) {
+          console.error("[VERIFICATION_POPUP] Redirect failed:", redirectError)
+          // Force navigation as fallback
+          window.location.replace("/dashboard")
         }
       }, 1000)
     }
