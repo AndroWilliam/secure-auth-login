@@ -63,21 +63,25 @@ export default function SignupPage() {
   // Check if email already exists
   const checkEmailExists = async (email: string): Promise<boolean> => {
     try {
-      // Try to sign in with a dummy password to check if email exists
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password: "dummy-password-to-check-email"
+      console.log("[EMAIL_CHECK] Checking email:", email)
+      
+      // Use a dedicated API endpoint to check email existence
+      const response = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
       })
       
-      // If we get "Invalid login credentials", the email exists but password is wrong
-      // If we get "User not found", the email doesn't exist
-      if (error?.message?.includes("Invalid login credentials")) {
-        return true // Email exists
+      if (!response.ok) {
+        console.error("[EMAIL_CHECK] API error:", response.status)
+        return false // Assume email doesn't exist on API error
       }
       
-      return false // Email doesn't exist
+      const { exists } = await response.json()
+      console.log("[EMAIL_CHECK] Email exists:", exists)
+      return exists
     } catch (error) {
-      console.error("Error checking email:", error)
+      console.error("[EMAIL_CHECK] Error checking email:", error)
       return false // Assume email doesn't exist on error
     }
   }
