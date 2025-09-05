@@ -45,25 +45,28 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
       await new Promise(resolve => setTimeout(resolve, 500))
       setIsComplete(true)
 
-      // Step 5: Redirect after short delay
+      // Step 5: Redirect directly to dashboard
       await new Promise(resolve => setTimeout(resolve, 1000))
-      console.log("[VERIFICATION_POPUP] Calling onComplete")
+      console.log("[VERIFICATION_POPUP] Redirecting directly to dashboard")
       
-      // Call the completion handler
-      onComplete()
-      
-      // If direct redirect is provided, use it as fallback
+      // Skip complex login completion and redirect directly
       if (onDirectRedirect) {
-        setTimeout(() => {
-          console.log("[VERIFICATION_POPUP] Using direct redirect")
-          onDirectRedirect()
-        }, 1500)
+        onDirectRedirect()
+      } else {
+        // Fallback: direct navigation to dashboard
+        window.location.href = "/dashboard"
       }
     } catch (error) {
       console.error("Verification failed:", error)
       // Still complete to avoid blocking user
       setIsComplete(true)
-      setTimeout(onComplete, 1000)
+      setTimeout(() => {
+        if (onDirectRedirect) {
+          onDirectRedirect()
+        } else {
+          window.location.href = "/dashboard"
+        }
+      }, 1000)
     }
   }
 

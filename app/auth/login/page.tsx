@@ -342,7 +342,7 @@ export default function LoginPage() {
   if (showVerificationPopup) {
     return (
       <VerificationPopup
-        onComplete={handleLoginCompletion}
+        onComplete={() => {}} // No-op since we're using direct redirect
         deviceId={loginData.deviceId || ""}
         userId={loginData.userId || ""}
         email={loginData.email}
