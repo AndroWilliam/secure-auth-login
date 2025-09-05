@@ -7,7 +7,7 @@ import { CheckCircle } from "lucide-react"
 
 export default function SignupSuccessPage() {
   const router = useRouter()
-  const [countdown, setCountdown] = useState(10)
+  const [countdown, setCountdown] = useState(3)
 
   useEffect(() => {
     // Start countdown
