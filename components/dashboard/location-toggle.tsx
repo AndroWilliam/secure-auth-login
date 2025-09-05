@@ -21,7 +21,7 @@ export function LocationToggle() {
   const [locationStatus, setLocationStatus] = useState<"checking" | "granted" | "denied" | "unavailable">("checking")
 
   useEffect(() => {
-    const checkLocationStatus = () => {
+    const checkLocationStatus = async () => {
       if (!navigator.geolocation) {
         setLocationStatus("unavailable")
         setLocationEnabled(false)
@@ -146,31 +146,34 @@ export function LocationToggle() {
 
       setLocationEnabled(true)
       setLocationStatus("granted")
+      
       // Store status securely
-    try {
-      const { setItem } = await import("@/lib/utils/secure-session");
-      await setItem("signup_location_status", "granted", 168); // 7 days
-    } catch (error) {
-      console.warn("Failed to store location status securely:", error);
-    }
+      try {
+        const { setItem } = await import("@/lib/utils/secure-session");
+        await setItem("signup_location_status", "granted", 168); // 7 days
+      } catch (error) {
+        console.warn("Failed to store location status securely:", error);
+      }
       
       // Trigger page refresh to update the location card
       window.location.reload()
+      
     } catch (error) {
       console.log("[v0] Location access denied:", error)
       setLocationEnabled(false)
       setLocationStatus("denied")
+      
       // Store status securely
-    try {
-      const { setItem } = await import("@/lib/utils/secure-session");
-      await setItem("signup_location_status", "denied", 168); // 7 days
-    } catch (error) {
-      console.warn("Failed to store location status securely:", error);
-    }
+      try {
+        const { setItem } = await import("@/lib/utils/secure-session");
+        await setItem("signup_location_status", "denied", 168); // 7 days
+      } catch (error) {
+        console.warn("Failed to store location status securely:", error);
+      }
     }
   }
 
-  const handleDisableLocation = () => {
+  const handleDisableLocation = async () => {
     setLocationEnabled(false)
     setLocationStatus("denied")
     // Store status securely
