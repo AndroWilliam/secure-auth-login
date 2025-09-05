@@ -1,100 +1,50 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { redirect } from "next/navigation"
+import { createServerClient, createServiceClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Shield, MapPin, Smartphone, Clock } from "lucide-react"
 import { LocationToggle } from "@/components/dashboard/location-toggle"
 
-export default function DashboardPage() {
-  const [user, setUser] = useState(null)
-  const [signupData, setSignupData] = useState(null)
-  const [loginData, setLoginData] = useState(null)
-  const [allLoginEvents, setAllLoginEvents] = useState([])
-  const [lastLoginTime, setLastLoginTime] = useState(null)
-  const [storedLocationData, setStoredLocationData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+export default async function DashboardPage() {
+  const supabase = await createServerClient()
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const supabase = createClient()
-        
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-        if (userError || !user) {
-          router.push("/auth/login")
-          return
-        }
-        setUser(user)
-
-        // Get signup event data
-        const { data: signupEvents } = await supabase
-          .from("user_info_events")
-          .select("event_data")
-          .eq("user_id", user.id)
-          .eq("event_type", "signup_completed")
-          .order("created_at", { ascending: false })
-          .limit(1)
-
-        // Get latest login event data
-        const { data: loginEvents } = await supabase
-          .from("user_info_events")
-          .select("event_data, created_at")
-          .eq("user_id", user.id)
-          .eq("event_type", "login_completed")
-          .order("created_at", { ascending: false })
-          .limit(1)
-
-        // Get all unique devices for this user
-        const { data: allEvents } = await supabase
-          .from("user_info_events")
-          .select("event_data")
-          .eq("user_id", user.id)
-          .eq("event_type", "login_completed")
-
-        setSignupData(signupEvents?.[0]?.event_data)
-        setLoginData(loginEvents?.[0]?.event_data)
-        setLastLoginTime(loginEvents?.[0]?.created_at)
-        setAllLoginEvents(allEvents || [])
-
-        // Check localStorage for current location data
-        try {
-          const stored = localStorage.getItem('current_location_data')
-          if (stored) {
-            setStoredLocationData(JSON.parse(stored))
-          }
-        } catch (e) {
-          console.warn('Failed to parse stored location data:', e)
-        }
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Loading dashboard...</p>
-        </div>
-      </div>
-    )
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data?.user) {
+    redirect("/auth/login")
   }
 
-  if (!user) {
-    return null
-  }
+  // Fetch signup and login event data
+  const serviceClient = createServiceClient()
+  const userId = data.user.id
+
+  // Get signup event data
+  const { data: signupEvents } = await serviceClient
+    .from("user_info_events")
+    .select("event_data")
+    .eq("user_id", userId)
+    .eq("event_type", "signup_completed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+
+  // Get latest login event data
+  const { data: loginEvents } = await serviceClient
+    .from("user_info_events")
+    .select("event_data, created_at")
+    .eq("user_id", userId)
+    .eq("event_type", "login_completed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+
+  // Get all unique devices for this user
+  const { data: allLoginEvents } = await serviceClient
+    .from("user_info_events")
+    .select("event_data")
+    .eq("user_id", userId)
+    .eq("event_type", "login_completed")
+
+  const signupData = signupEvents?.[0]?.event_data
+  const loginData = loginEvents?.[0]?.event_data
+  const lastLoginTime = loginEvents?.[0]?.created_at
 
   // Extract location and device info
   const signupLocation = signupData?.locationData || signupData?.geo_location
@@ -282,13 +232,10 @@ export default function DashboardPage() {
   }
 
   const handleSignOut = async () => {
-    try {
-      const supabase = createClient()
-      await supabase.auth.signOut()
-      router.push("/auth/login")
-    } catch (error) {
-      console.error("Error signing out:", error)
-    }
+    "use server"
+    const supabase = await createServerClient()
+    await supabase.auth.signOut()
+    redirect("/auth/login")
   }
 
   return (
@@ -297,9 +244,11 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Security Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {user.email}</p>
+            <p className="text-muted-foreground">Welcome back, {data.user.email}</p>
           </div>
-          <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
+          <form action={handleSignOut}>
+            <Button variant="outline">Sign Out</Button>
+          </form>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -359,12 +308,7 @@ export default function DashboardPage() {
                   <div className="flex-1">
                     <p className="font-medium">Location Verified</p>
                     <div className="text-sm text-muted-foreground space-y-1">
-                      {storedLocationData && (storedLocationData.city !== 'Unknown' || storedLocationData.country !== 'Unknown') ? (
-                        <div>
-                          <p><strong>Current Location:</strong> {storedLocationData.city || 'Unknown'}, {storedLocationData.country || 'Unknown'}</p>
-                          <p className="text-xs font-mono">Coords: {storedLocationData.coordinates?.lat?.toFixed(6) || 'N/A'}, {storedLocationData.coordinates?.lng?.toFixed(6) || 'N/A'}</p>
-                        </div>
-                      ) : currentLocation && (currentLocation.city !== 'Unknown' || currentLocation.country !== 'Unknown') ? (
+                      {currentLocation && (currentLocation.city !== 'Unknown' || currentLocation.country !== 'Unknown') ? (
                         <div>
                           <p><strong>Current Location:</strong> {currentLocation.city || 'Unknown'}, {currentLocation.country || 'Unknown'}</p>
                           <p className="text-xs font-mono">Coords: {currentLocation.coordinates?.lat?.toFixed(6) || currentLocation.latitude?.toFixed(6) || 'N/A'}, {currentLocation.coordinates?.lng?.toFixed(6) || currentLocation.longitude?.toFixed(6) || 'N/A'}</p>
