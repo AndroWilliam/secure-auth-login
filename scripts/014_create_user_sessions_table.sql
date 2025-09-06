@@ -51,3 +51,4 @@ $$ LANGUAGE plpgsql;
 -- Note: You can schedule this function to run periodically
 -- For example, create a cron job or use pg_cron extension:
 -- SELECT cron.schedule('cleanup-sessions', '0 2 * * *', 'SELECT cleanup_expired_sessions();');
+

@@ -17,10 +17,10 @@ export function getDeviceId(): string {
   let deviceId = localStorage.getItem("deviceId")
 
   if (!deviceId) {
-    // Generate a temporary device ID (will be replaced by server with IP-based ID)
+    // Generate a temporary device ID (will be replaced by server)
     deviceId = generateClientDeviceId()
     
-    // Store the device ID persistently
+    // Store temporarily in localStorage (this is replaced by server anyway)
     localStorage.setItem("deviceId", deviceId)
     console.log("[DEVICE_ID] Generated temporary device ID:", deviceId)
   } else {

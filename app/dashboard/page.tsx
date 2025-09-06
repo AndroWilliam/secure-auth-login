@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { createServerClient, createServiceClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Shield, MapPin, Smartphone, Clock } from "lucide-react"
+import { Shield, MapPin, Smartphone, Clock, Users } from "lucide-react"
 import { LocationToggle } from "@/components/dashboard/location-toggle"
 import { LocationDisplay } from "@/components/dashboard/location-display"
 
@@ -17,6 +17,15 @@ export default async function DashboardPage() {
   // Fetch signup and login event data
   const serviceClient = createServiceClient()
   const userId = data.user.id
+
+  // Get user role for admin features
+  const { data: profile } = await serviceClient
+    .from("profiles")
+    .select("role")
+    .eq("user_id", userId)
+    .single()
+
+  const userRole = profile?.role
 
   // Get signup event data
   const { data: signupEvents } = await serviceClient
@@ -247,9 +256,19 @@ export default async function DashboardPage() {
             <h1 className="text-3xl font-bold">Security Dashboard</h1>
             <p className="text-muted-foreground">Welcome back, {data.user.email}</p>
           </div>
-          <form action={handleSignOut}>
-            <Button variant="outline">Sign Out</Button>
-          </form>
+          <div className="flex items-center gap-3">
+            {userRole && ['admin', 'moderator', 'viewer'].includes(userRole) && (
+              <Button variant="outline" className="flex items-center gap-2" asChild>
+                <a href="/admin/users">
+                  <Users className="h-4 w-4" />
+                  User Management
+                </a>
+              </Button>
+            )}
+            <form action={handleSignOut}>
+              <Button variant="outline">Sign Out</Button>
+            </form>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -180,3 +180,4 @@ export const secureSession = SecureSessionManager.getInstance();
 
 // Export individual functions for convenience
 export const { setItem, getItem, removeItem, setItemFallback, getItemFallback, removeItemFallback, migrateFromLocalStorage } = secureSession;
+
