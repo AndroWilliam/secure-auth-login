@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UserManagementTable } from "@/components/admin/user-management-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, UserCheck, Shield, Eye } from "lucide-react";
 
 async function getUserStats() {
-  const supabase = createClient();
+  const supabase = await createServerClient();
   
   const { data: stats, error } = await supabase
     .rpc('get_user_stats');
@@ -20,7 +20,7 @@ async function getUserStats() {
 }
 
 async function getUserRole() {
-  const supabase = createClient();
+  const supabase = await createServerClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) {
