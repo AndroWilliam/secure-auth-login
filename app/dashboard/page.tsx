@@ -19,13 +19,23 @@ export default async function DashboardPage() {
   const userId = data.user.id
 
   // Get user role for admin features
-  const { data: profile } = await serviceClient
+  const { data: profile, error: profileError } = await serviceClient
     .from("profiles")
     .select("role")
     .eq("user_id", userId)
     .single()
 
-  const userRole = profile?.role
+  // Fallback: if role column doesn't exist yet, check if this is the admin email
+  let userRole = profile?.role
+  if (!userRole && data.user.email === 'androa687@gmail.com') {
+    userRole = 'admin'
+  }
+
+  // Debug logging
+  console.log('[DASHBOARD] User email:', data.user.email)
+  console.log('[DASHBOARD] Profile data:', profile)
+  console.log('[DASHBOARD] Profile error:', profileError)
+  console.log('[DASHBOARD] User role:', userRole)
 
   // Get signup event data
   const { data: signupEvents } = await serviceClient
@@ -257,19 +267,64 @@ export default async function DashboardPage() {
             <p className="text-muted-foreground">Welcome back, {data.user.email}</p>
           </div>
           <div className="flex items-center gap-3">
-            {userRole && ['admin', 'moderator', 'viewer'].includes(userRole) && (
+            {userRole && ['admin', 'moderator', 'viewer'].includes(userRole) ? (
               <Button variant="outline" className="flex items-center gap-2" asChild>
                 <a href="/admin/users">
                   <Users className="h-4 w-4" />
                   User Management
                 </a>
               </Button>
-            )}
+            ) : data.user.email === 'androa687@gmail.com' ? (
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100" 
+                asChild
+              >
+                <a href="/api/setup-admin" target="_blank">
+                  <Users className="h-4 w-4" />
+                  Setup Admin
+                </a>
+              </Button>
+            ) : null}
             <form action={handleSignOut}>
               <Button variant="outline">Sign Out</Button>
             </form>
           </div>
         </div>
+
+        {/* Setup Alert for Admin User */}
+        {!userRole && data.user.email === 'androa687@gmail.com' && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-blue-100">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-900">User Management Setup Required</h3>
+                <p className="text-blue-700 text-sm mt-1">
+                  To access user management features, please run the database migration first:
+                </p>
+                <ol className="text-blue-700 text-sm mt-2 list-decimal list-inside space-y-1">
+                  <li>Go to your Supabase Dashboard → SQL Editor</li>
+                  <li>Execute the script: <code className="bg-blue-200 px-1 rounded">scripts/015_create_user_roles_system.sql</code></li>
+                  <li>Refresh this page to access User Management</li>
+                </ol>
+                <div className="mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-blue-100 border-blue-300 text-blue-800 hover:bg-blue-200"
+                    asChild
+                  >
+                    <a href="/api/setup-admin" target="_blank">
+                      Check Setup Status
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card>
