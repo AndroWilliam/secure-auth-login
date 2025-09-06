@@ -7,9 +7,10 @@ import { SupabaseClient } from '@supabase/supabase-js';
  */
 export async function getUserProfile(supabase: SupabaseClient, userId: string) {
   // First try with 'id' column (most common in newer Supabase setups)
+  // Only select columns we know exist: role, is_active, and timestamps
   let { data: profile, error } = await supabase
     .from("profiles")
-    .select("role, is_active, full_name, email, phone, last_active_at, created_at, updated_at")
+    .select("role, is_active, last_active_at, created_at, updated_at")
     .eq("id", userId)
     .single();
 
@@ -17,7 +18,7 @@ export async function getUserProfile(supabase: SupabaseClient, userId: string) {
   if (error && error.message?.includes('0 rows')) {
     const { data: profileById, error: errorById } = await supabase
       .from("profiles")
-      .select("role, is_active, full_name, email, phone, last_active_at, created_at, updated_at")
+      .select("role, is_active, last_active_at, created_at, updated_at")
       .eq("user_id", userId)
       .single();
     
@@ -75,9 +76,6 @@ export async function getProfiles(
     .from("profiles")
     .select(`
       id,
-      full_name,
-      email,
-      phone,
       role,
       is_active,
       last_active_at,
@@ -85,10 +83,10 @@ export async function getProfiles(
       updated_at
     `, { count: 'exact' });
 
-  // Apply filters
-  if (search) {
-    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
-  }
+  // Apply filters (search disabled since we don't know which text columns exist)
+  // if (search) {
+  //   query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+  // }
 
   if (roleFilter) {
     query = query.eq("role", roleFilter);
