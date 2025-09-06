@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { getUserProfile, getProfiles } from "@/lib/utils/supabase-helpers";
 
 // GET - Get all users with pagination and filtering
 export async function GET(req: NextRequest) {
@@ -15,13 +16,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if user has permission to view users
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
+    const { data: profile, error: profileError } = await getUserProfile(supabase, user.id);
 
-    if (!profile || !['admin', 'moderator', 'viewer'].includes(profile.role)) {
+    if (profileError || !profile || !['admin', 'moderator', 'viewer'].includes(profile.role)) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
@@ -32,42 +29,14 @@ export async function GET(req: NextRequest) {
     const role_filter = url.searchParams.get("role") || "";
     const status_filter = url.searchParams.get("status") || "";
 
-    const offset = (page - 1) * limit;
-
-    // Build query based on user role permissions
-    let query = supabase
-      .from("profiles")
-      .select(`
-        user_id,
-        full_name,
-        email,
-        phone,
-        role,
-        is_active,
-        last_active_at,
-        created_at,
-        updated_at
-      `, { count: 'exact' });
-
-    // Apply filters
-    if (search) {
-      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
-    }
-
-    if (role_filter) {
-      query = query.eq("role", role_filter);
-    }
-
-    if (status_filter === "active") {
-      query = query.eq("is_active", true);
-    } else if (status_filter === "inactive") {
-      query = query.eq("is_active", false);
-    }
-
-    // Apply pagination
-    const { data: users, error, count } = await query
-      .range(offset, offset + limit - 1)
-      .order("created_at", { ascending: false });
+    // Use helper function to get profiles
+    const { data: users, error, count } = await getProfiles(supabase, {
+      page,
+      limit,
+      search,
+      roleFilter: role_filter,
+      statusFilter: status_filter
+    });
 
     if (error) {
       console.error("[USERS_API] Error fetching users:", error);
@@ -79,7 +48,7 @@ export async function GET(req: NextRequest) {
     if (profile.role === 'viewer') {
       // Viewers can only see limited info
       filteredUsers = users?.map(user => ({
-        user_id: user.user_id,
+        id: user.id,
         full_name: user.full_name,
         role: user.role,
         is_active: user.is_active,
@@ -115,13 +84,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
+    const { data: profile, error: profileError } = await getUserProfile(supabase, user.id);
 
-    if (!profile || profile.role !== 'admin') {
+    if (profileError || !profile || profile.role !== 'admin') {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
@@ -148,10 +113,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Create profile
-    const { error: profileError } = await supabase
+    const { error: profileInsertError } = await supabase
       .from("profiles")
       .insert({
-        user_id: newUser.user.id,
+        id: newUser.user.id,
         full_name,
         email,
         phone: phone || null,
@@ -160,8 +125,8 @@ export async function POST(req: NextRequest) {
         created_by: user.id
       });
 
-    if (profileError) {
-      console.error("[USERS_API] Error creating profile:", profileError);
+    if (profileInsertError) {
+      console.error("[USERS_API] Error creating profile:", profileInsertError);
       // Try to delete the created auth user if profile creation fails
       await supabase.auth.admin.deleteUser(newUser.user.id);
       return NextResponse.json({ 
