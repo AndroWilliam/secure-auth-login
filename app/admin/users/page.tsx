@@ -27,6 +27,11 @@ async function getUserRole() {
     redirect("/auth/login");
   }
 
+  // Special case for admin user - allow access even without profile
+  if (user.email === "androa687@gmail.com") {
+    return "admin" as const;
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
