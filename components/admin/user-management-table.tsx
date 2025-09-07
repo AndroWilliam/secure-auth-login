@@ -304,7 +304,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
   const canViewFullDetails = userRole !== 'viewer';
 
   return (
-    <Card className="w-full bg-gray-900 border-gray-700">
+    <Card className="w-full bg-black border-gray-800">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-2xl font-bold text-white">User Management</CardTitle>
@@ -441,7 +441,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-600">
+              <tr className="border-b border-gray-800">
                 <th className="text-left py-3 px-4 font-medium text-gray-300">#</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-300">Name</th>
                 {canViewFullDetails && (
@@ -473,7 +473,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
                 </tr>
               ) : (
                 users.map((user, index) => (
-                  <tr key={user.user_id} className="border-b border-gray-700 hover:bg-gray-800">
+                  <tr key={user.user_id} className="border-b border-gray-800 hover:bg-gray-900">
                     <td className="py-4 px-4 text-sm text-gray-300">
                       {(page - 1) * 10 + index + 1}
                     </td>

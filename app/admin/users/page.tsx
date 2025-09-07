@@ -60,7 +60,7 @@ export default async function UserManagementPage() {
         {/* Stats Cards */}
         {stats && userRole !== 'viewer' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-black border-gray-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   Total Users
@@ -72,7 +72,7 @@ export default async function UserManagementPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-black border-gray-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   Active Users
@@ -84,7 +84,7 @@ export default async function UserManagementPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-black border-gray-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   Admins
@@ -96,7 +96,7 @@ export default async function UserManagementPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-black border-gray-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   Moderators
