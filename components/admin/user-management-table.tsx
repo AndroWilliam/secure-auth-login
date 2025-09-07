@@ -111,7 +111,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
 
     // Admins create users directly
     try {
-      const response = await fetch('/api/admin/users', {
+      const response = await fetch('/api/mock/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser)
@@ -172,7 +172,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
 
     // Admins edit users directly
     try {
-      const response = await fetch(`/api/admin/users/${selectedUser.user_id}`, {
+      const response = await fetch(`/api/mock/admin/users/${selectedUser.user_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -226,7 +226,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
 
     // Admins delete users directly
     try {
-      const response = await fetch(`/api/admin/users/${user.user_id}`, {
+      const response = await fetch(`/api/mock/admin/users/${user.user_id}`, {
         method: 'DELETE'
       });
 
