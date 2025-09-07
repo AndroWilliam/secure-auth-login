@@ -4,19 +4,11 @@ import { UserManagementTable } from "@/components/admin/user-management-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, UserCheck, Shield, Eye } from "lucide-react";
+import { mockUserStats } from "@/lib/mock-data/users";
 
 async function getUserStats() {
-  const supabase = await createServerClient();
-  
-  const { data: stats, error } = await supabase
-    .rpc('get_user_stats');
-
-  if (error) {
-    console.error('Error fetching user stats:', error);
-    return null;
-  }
-
-  return stats?.[0] || null;
+  // Return mock stats for now
+  return mockUserStats;
 }
 
 async function getUserRole() {

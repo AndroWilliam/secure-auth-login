@@ -60,7 +60,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
         ...(statusFilter && { status: statusFilter })
       });
 
-      const response = await fetch(`/api/admin/users?${params}`);
+      const response = await fetch(`/api/mock/admin/users?${params}`);
       const data = await response.json();
 
       if (response.ok) {
