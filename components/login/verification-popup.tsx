@@ -56,56 +56,39 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
       try {
         const coords = await getCurrentPosition()
         if (coords) {
+          // Reverse geocode to get actual city and country
+          let city = "Unknown"
+          let country = "Unknown"
+          
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=10&addressdetails=1`
+            )
+            const geoData = await response.json()
+            city = geoData.address?.city || geoData.address?.town || geoData.address?.village || "Unknown"
+            country = geoData.address?.country || "Unknown"
+            console.log("[VERIFICATION_POPUP] Reverse geocoding result:", { city, country })
+          } catch (geoError) {
+            console.warn("[VERIFICATION_POPUP] Reverse geocoding failed:", geoError)
+          }
+          
           // Store current location for dashboard display
           const locationData = {
-            city: "Current Location", // We'll get the actual city via reverse geocoding
-            country: "Current Location",
+            city,
+            country,
             coordinates: { lat: coords.latitude, lng: coords.longitude },
             timestamp: new Date().toISOString()
           }
+          
+          console.log("[VERIFICATION_POPUP] Storing location data:", locationData)
+          
           // Store location data securely on server-side
           try {
             const { setItem } = await import("@/lib/utils/secure-session");
             await setItem("current_location_data", locationData, 72); // 3 days expiry
+            console.log("[VERIFICATION_POPUP] Location data stored successfully")
           } catch (error) {
             console.warn("[VERIFICATION_POPUP] Failed to store location securely:", error);
-          }
-          
-          // Try reverse geocoding with timeout
-          try {
-            console.log("[VERIFICATION_POPUP] Attempting reverse geocoding")
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
-            
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=10&addressdetails=1`,
-              { signal: controller.signal }
-            )
-            clearTimeout(timeoutId)
-            
-            if (response.ok) {
-              const geoData = await response.json()
-              const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || "Unknown"
-              const country = geoData.address?.country || "Unknown"
-              
-              const updatedLocationData = {
-                ...locationData,
-                city,
-                country
-              }
-              // Store updated location data securely
-              try {
-                const { setItem } = await import("@/lib/utils/secure-session");
-                await setItem("current_location_data", updatedLocationData, 72); // 3 days expiry
-              } catch (error) {
-                console.warn("[VERIFICATION_POPUP] Failed to store updated location securely:", error);
-              }
-              console.log("[VERIFICATION_POPUP] Location updated:", city, country)
-            } else {
-              console.warn("[VERIFICATION_POPUP] Reverse geocoding failed:", response.status)
-            }
-          } catch (geoError) {
-            console.warn("[VERIFICATION_POPUP] Failed to get location name:", geoError)
           }
         }
       } catch (locationError) {

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { createServerClient, createServiceClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -269,10 +270,10 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-3">
             {userRole && ['admin', 'moderator', 'viewer'].includes(userRole) ? (
               <Button variant="outline" className="flex items-center gap-2" asChild>
-                <a href="/admin/users">
+                <Link href="/admin/users">
                   <Users className="h-4 w-4" />
                   User Management
-                </a>
+                </Link>
               </Button>
             ) : data.user.email === 'androa687@gmail.com' ? (
               <Button 
