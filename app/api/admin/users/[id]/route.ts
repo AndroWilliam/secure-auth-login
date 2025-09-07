@@ -10,22 +10,21 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Use service client to avoid RLS recursion on profiles policies
-    const supabase = createServiceClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Use server client to read auth session (cookies)
+    const authClient = await createServerClient();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
+    // Use service client to bypass RLS when checking profile
+    const service = createServiceClient();
     let profile;
-    
-    // Special case for admin user
     if (user.email === "androa687@gmail.com") {
       profile = { role: "admin" };
     } else {
-      const { data } = await supabase
+      const { data } = await service
         .from("profiles")
         .select("role")
         .eq("id", user.id)
@@ -80,22 +79,21 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Use service client to avoid RLS recursion on profiles policies
-    const supabase = createServiceClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Use server client to read auth session (cookies)
+    const authClient = await createServerClient();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
+    // Use service client to bypass RLS when checking profile
+    const service = createServiceClient();
     let profile;
-    
-    // Special case for admin user
     if (user.email === "androa687@gmail.com") {
       profile = { role: "admin" };
     } else {
-      const { data } = await supabase
+      const { data } = await service
         .from("profiles")
         .select("role")
         .eq("id", user.id)

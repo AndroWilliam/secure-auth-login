@@ -8,23 +8,24 @@ import { getUserProfile, getProfiles } from "@/lib/utils/supabase-helpers";
 // GET - Get all users with pagination and filtering
 export async function GET(req: NextRequest) {
   try {
-    // Use service client to avoid RLS recursion on profiles policies
-    const supabase = createServiceClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Use server client to read auth session (cookies)
+    const authClient = await createServerClient();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Use service client to bypass RLS for profile checks and listing
+    const service = createServiceClient();
+    
     // Check if user has permission to view users
     let profile;
     let profileError = null;
-    
-    // Special case for admin user
     if (user.email === "androa687@gmail.com") {
-      profile = { role: "admin" };
+      profile = { role: "admin" } as any;
     } else {
-      const result = await getUserProfile(supabase, user.id);
+      const result = await getUserProfile(service as any, user.id);
       profile = result.data;
       profileError = result.error;
     }
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     const status_filter = url.searchParams.get("status") || "";
 
     // Use helper function to get profiles
-    const { data: users, error, count } = await getProfiles(supabase, {
+    const { data: users, error, count } = await getProfiles(service as any, {
       page,
       limit,
       search,
