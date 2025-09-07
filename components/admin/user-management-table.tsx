@@ -304,10 +304,10 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
   const canViewFullDetails = userRole !== 'viewer';
 
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-gray-900 border-gray-700">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-2xl font-bold text-blue-600">User Management</CardTitle>
+          <CardTitle className="text-2xl font-bold text-blue-400">User Management</CardTitle>
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={exportToExcel}
@@ -411,11 +411,11 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
               placeholder="Search by name or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
             />
           </div>
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] bg-gray-800 border-gray-600 text-white">
               <SelectValue placeholder="Filter by role" />
             </SelectTrigger>
             <SelectContent>
@@ -426,7 +426,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] bg-gray-800 border-gray-600 text-white">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -441,18 +441,18 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-medium text-gray-700">#</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Name</th>
+              <tr className="border-b border-gray-600">
+                <th className="text-left py-3 px-4 font-medium text-gray-300">#</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-300">Name</th>
                 {canViewFullDetails && (
                   <>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Date Created</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Role</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-300">Date Created</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-300">Role</th>
                   </>
                 )}
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-300">Status</th>
                 {canManageUsers && (
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Actions</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-300">Actions</th>
                 )}
               </tr>
             </thead>
@@ -473,8 +473,8 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
                 </tr>
               ) : (
                 users.map((user, index) => (
-                  <tr key={user.user_id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 px-4 text-sm text-gray-600">
+                  <tr key={user.user_id} className="border-b border-gray-700 hover:bg-gray-800">
+                    <td className="py-4 px-4 text-sm text-gray-300">
                       {(page - 1) * 10 + index + 1}
                     </td>
                     <td className="py-4 px-4">
@@ -485,16 +485,16 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-gray-900">{user.full_name}</div>
+                          <div className="font-medium text-white">{user.full_name}</div>
                           {canViewFullDetails && (
-                            <div className="text-sm text-gray-500">{user.email}</div>
+                            <div className="text-sm text-gray-400">{user.email}</div>
                           )}
                         </div>
                       </div>
                     </td>
                     {canViewFullDetails && (
                       <>
-                        <td className="py-4 px-4 text-sm text-gray-600">
+                        <td className="py-4 px-4 text-sm text-gray-300">
                           {new Date(user.created_at).toLocaleDateString()}
                         </td>
                         <td className="py-4 px-4">
