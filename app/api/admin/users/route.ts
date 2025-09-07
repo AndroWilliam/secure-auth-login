@@ -2,13 +2,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceClient } from "@/lib/supabase/server";
 import { getUserProfile, getProfiles } from "@/lib/utils/supabase-helpers";
 
 // GET - Get all users with pagination and filtering
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createServerClient();
+    // Use service client to avoid RLS recursion on profiles policies
+    const supabase = createServiceClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -86,7 +87,8 @@ export async function GET(req: NextRequest) {
 // POST - Create new user (Admin only)
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createServerClient();
+    // Use service client to avoid RLS recursion on profiles policies
+    const supabase = createServiceClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

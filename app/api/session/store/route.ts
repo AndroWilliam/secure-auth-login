@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       .upsert({
         user_id: user.id,
         session_key: key,
-        session_value: value,
+        session_data: value,
         expires_at: expires_at.toISOString(),
         updated_at: new Date().toISOString()
       }, {

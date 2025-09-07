@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     // Get session data and check expiry
     const { data: sessionData, error: queryError } = await supabase
       .from("user_sessions")
-      .select("session_value, expires_at")
+      .select("session_data, expires_at")
       .eq("user_id", user.id)
       .eq("session_key", key)
       .gt("expires_at", new Date().toISOString()) // Only get non-expired data
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("[SESSION_GET] Successfully retrieved data for key:", key);
-    return NextResponse.json({ value: sessionData.session_value });
+    return NextResponse.json({ value: sessionData.session_data });
 
   } catch (error) {
     console.error("[SESSION_GET] Error:", error);
