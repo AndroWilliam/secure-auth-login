@@ -287,17 +287,17 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'moderator': return 'bg-blue-100 text-blue-800';
-      case 'viewer': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'admin': return 'bg-red-800 text-red-200';
+      case 'moderator': return 'bg-gray-700 text-gray-200';
+      case 'viewer': return 'bg-green-800 text-green-200';
+      default: return 'bg-gray-700 text-gray-200';
     }
   };
 
   const getStatusColor = (isActive: boolean) => {
     return isActive 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-red-100 text-red-800';
+      ? 'bg-green-800 text-green-200' 
+      : 'bg-red-800 text-red-200';
   };
 
   const canManageUsers = userRole === 'admin' || userRole === 'moderator';
@@ -307,13 +307,13 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
     <Card className="w-full bg-gray-900 border-gray-700">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-2xl font-bold text-blue-400">User Management</CardTitle>
+          <CardTitle className="text-2xl font-bold text-white">User Management</CardTitle>
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={exportToExcel}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white border-gray-600"
             >
               <FileDown className="w-4 h-4" />
               Export to Excel
@@ -321,7 +321,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
             {canManageUsers && (
               <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="flex items-center gap-2">
+                  <Button size="sm" className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white border-gray-600">
                     <Plus className="w-4 h-4" />
                     Add New User
                   </Button>
@@ -480,7 +480,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                          <AvatarFallback className="bg-gray-700 text-gray-200 text-sm">
                             {user.full_name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                           </AvatarFallback>
                         </Avatar>

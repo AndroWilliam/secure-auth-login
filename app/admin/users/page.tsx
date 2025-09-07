@@ -50,7 +50,7 @@ export default async function UserManagementPage() {
             <h1 className="text-3xl font-bold text-white">User Management</h1>
             <p className="text-gray-300 mt-1">
               Manage user accounts and permissions
-              <Badge className="ml-2 bg-blue-600 text-white">
+              <Badge className="ml-2 bg-gray-700 text-white">
                 {userRole.charAt(0).toUpperCase() + userRole.slice(1)} Access
               </Badge>
             </p>
@@ -65,7 +65,7 @@ export default async function UserManagementPage() {
                 <CardTitle className="text-sm font-medium text-gray-300">
                   Total Users
                 </CardTitle>
-                <Users className="h-4 w-4 text-blue-400" />
+                <Users className="h-4 w-4 text-gray-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-white">{stats.total_users}</div>
@@ -101,10 +101,10 @@ export default async function UserManagementPage() {
                 <CardTitle className="text-sm font-medium text-gray-300">
                   Moderators
                 </CardTitle>
-                <Eye className="h-4 w-4 text-blue-400" />
+                <Eye className="h-4 w-4 text-gray-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-400">{stats.moderators}</div>
+                <div className="text-2xl font-bold text-gray-400">{stats.moderators}</div>
               </CardContent>
             </Card>
           </div>
@@ -114,7 +114,7 @@ export default async function UserManagementPage() {
         <Card className="bg-gray-900 border-gray-700">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-full bg-blue-600">
+              <div className="p-2 rounded-full bg-gray-700">
                 {userRole === 'admin' && <Shield className="w-5 h-5 text-white" />}
                 {userRole === 'moderator' && <Users className="w-5 h-5 text-white" />}
                 {userRole === 'viewer' && <Eye className="w-5 h-5 text-white" />}
