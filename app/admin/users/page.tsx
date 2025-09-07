@@ -1,134 +1,191 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { UserManagementTable } from "@/components/admin/user-management-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCheck, Shield, Eye } from "lucide-react";
-import { mockUserStats } from "@/lib/mock-data/users";
+import { Button } from "@/components/ui/button";
+import { Users, Shield, Eye, UserCheck, UserX, UserPlus, Clock } from "lucide-react";
+import { AdminUsersTable } from "@/components/admin/AdminUsersTable";
+import { getUserStats } from "@/lib/admin/mockApi";
+import { initPresence, startHeartbeat } from "@/lib/admin/presenceMock";
+import { mockUsers } from "@/lib/admin/test-data";
 
-async function getUserStats() {
-  // Return mock stats for now
-  return mockUserStats;
-}
+export default function AdminUsersPage() {
+  const [userRole, setUserRole] = useState<'admin' | 'moderator' | 'viewer'>('viewer');
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    idle: 0,
+    inactive: 0,
+    admins: 0,
+    moderators: 0,
+    viewers: 0
+  });
 
-async function getUserRole() {
-  const supabase = await createServerClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const supabase = await createServerClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    redirect("/auth/login");
+        if (authError || !user) {
+          redirect('/auth/login');
+          return;
+        }
+
+        // Special case for admin user
+        if (user.email === 'androa687@gmail.com') {
+          setUserRole('admin');
+          setLoading(false);
+          return;
+        }
+
+        // Check user profile for role
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.error('Profile error:', profileError);
+          setUserRole('viewer');
+        } else {
+          setUserRole(profile.role || 'viewer');
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error);
+        setUserRole('viewer');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUserRole();
+  }, []);
+
+  // Initialize presence system and fetch stats
+  useEffect(() => {
+    const initializeData = async () => {
+      // Initialize presence with mock users
+      initPresence(mockUsers);
+      
+      // Start heartbeat for real-time updates
+      startHeartbeat(30000); // 30 seconds
+      
+      // Fetch user statistics
+      try {
+        const result = await getUserStats();
+        if (result.ok) {
+          setStats(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      }
+    };
+
+    if (!loading) {
+      initializeData();
+    }
+  }, [loading]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
   }
 
-  // Special case for admin user - allow access even without profile
-  if (user.email === "androa687@gmail.com") {
-    return "admin" as const;
+  if (userRole === 'viewer') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Access Denied</h1>
+          <p className="text-gray-300">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
   }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || !['admin', 'moderator', 'viewer'].includes(profile.role)) {
-    redirect("/dashboard");
-  }
-
-  return profile.role as 'admin' | 'moderator' | 'viewer';
-}
-
-export default async function UserManagementPage() {
-  const userRole = await getUserRole();
-  const stats = await getUserStats();
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">User Management</h1>
-            <p className="text-gray-300 mt-1">
-              Manage user accounts and permissions
-              <Badge className="ml-2 bg-gray-700 text-white">
-                {userRole.charAt(0).toUpperCase() + userRole.slice(1)} Access
-              </Badge>
-            </p>
-          </div>
+    <div className="min-h-screen bg-black text-white">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">User Management</h1>
+          <p className="text-gray-300">Manage user accounts and permissions</p>
         </div>
 
         {/* Stats Cards */}
-        {stats && userRole !== 'viewer' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-black border-gray-800">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  Total Users
-                </CardTitle>
-                <Users className="h-4 w-4 text-gray-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">{stats.total_users}</div>
-              </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-black border-gray-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-300 text-sm font-medium">Total Users</p>
+                  <p className="text-2xl font-bold text-white">{stats.total}</p>
+                </div>
+                <Users className="h-8 w-8 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="bg-black border-gray-800">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  Active Users
-                </CardTitle>
-                <UserCheck className="h-4 w-4 text-green-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-400">{stats.active_users}</div>
-              </CardContent>
-            </Card>
+          <Card className="bg-black border-gray-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-300 text-sm font-medium">Active Users</p>
+                  <p className="text-2xl font-bold text-white">{stats.active}</p>
+                </div>
+                <UserCheck className="h-8 w-8 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="bg-black border-gray-800">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  Admins
-                </CardTitle>
-                <Shield className="h-4 w-4 text-red-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-400">{stats.admins}</div>
-              </CardContent>
-            </Card>
+          <Card className="bg-black border-gray-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-300 text-sm font-medium">Idle Users</p>
+                  <p className="text-2xl font-bold text-white">{stats.idle}</p>
+                </div>
+                <Clock className="h-8 w-8 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="bg-black border-gray-800">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  Moderators
-                </CardTitle>
-                <Eye className="h-4 w-4 text-gray-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-400">{stats.moderators}</div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+          <Card className="bg-black border-gray-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-300 text-sm font-medium">Admins</p>
+                  <p className="text-2xl font-bold text-white">{stats.admins}</p>
+                </div>
+                <Shield className="h-8 w-8 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Role-based Information */}
-        <Card className="bg-gray-900 border-gray-700">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-full bg-gray-700">
-                {userRole === 'admin' && <Shield className="w-5 h-5 text-white" />}
-                {userRole === 'moderator' && <Users className="w-5 h-5 text-white" />}
-                {userRole === 'viewer' && <Eye className="w-5 h-5 text-white" />}
+        {/* Role-based Info Card */}
+        <Card className="bg-black border-gray-800 mb-8">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-gray-700 p-3 rounded-full">
+                <Shield className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">
-                  {userRole === 'admin' && 'Administrator Access'}
-                  {userRole === 'moderator' && 'Moderator Access'}
-                  {userRole === 'viewer' && 'Viewer Access'}
+                <h3 className="text-lg font-semibold text-white">
+                  {userRole === 'admin' ? 'Administrator Access' : 'Moderator Access'}
                 </h3>
-                <p className="text-gray-300 text-sm mt-1">
-                  {userRole === 'admin' && 'You can add, edit, and delete users directly. All changes take effect immediately.'}
-                  {userRole === 'moderator' && 'You can submit requests to add, edit, or delete users. These requests require admin approval.'}
-                  {userRole === 'viewer' && 'You can view user status and activity information only. No modification permissions.'}
+                <p className="text-gray-300">
+                  {userRole === 'admin' 
+                    ? 'You can add, edit, and delete users directly. All changes take effect immediately.'
+                    : 'You can view users and submit change requests for admin approval.'
+                  }
                 </p>
               </div>
             </div>
@@ -136,7 +193,7 @@ export default async function UserManagementPage() {
         </Card>
 
         {/* User Management Table */}
-        <UserManagementTable userRole={userRole} />
+        <AdminUsersTable userRole={userRole} />
       </div>
     </div>
   );
