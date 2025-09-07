@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const { data: profile, error: profileError } = await serviceClient
     .from("profiles")
     .select("role")
-    .eq("user_id", userId)
+    .eq("id", userId)
     .single()
 
   // Fallback: if role column doesn't exist yet, check if this is the admin email
