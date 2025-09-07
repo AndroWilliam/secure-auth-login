@@ -110,7 +110,7 @@ export function getMockUsers(options: {
   }
   
   // Apply role filter
-  if (roleFilter) {
+  if (roleFilter && roleFilter !== "all") {
     filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
   }
   

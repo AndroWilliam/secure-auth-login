@@ -36,8 +36,8 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -56,8 +56,8 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
         page: page.toString(),
         limit: "10",
         ...(search && { search }),
-        ...(roleFilter && { role: roleFilter }),
-        ...(statusFilter && { status: statusFilter })
+        ...(roleFilter && roleFilter !== "all" && { role: roleFilter }),
+        ...(statusFilter && statusFilter !== "all" && { status: statusFilter })
       });
 
       const response = await fetch(`/api/mock/admin/users?${params}`);
@@ -419,7 +419,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
               <SelectValue placeholder="Filter by role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Roles</SelectItem>
+              <SelectItem value="all">All Roles</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="moderator">Moderator</SelectItem>
               <SelectItem value="viewer">Viewer</SelectItem>
@@ -430,7 +430,7 @@ export function UserManagementTable({ userRole }: UserManagementTableProps) {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
