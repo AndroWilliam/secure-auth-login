@@ -7,7 +7,8 @@ const PUBLIC_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PUBLIC_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // service-role envs for admin ops (no cookies)
-const SERVICE_URL = process.env.SUPABASE_URL!;
+// Use PUBLIC_URL for the URL to avoid missing SUPABASE_URL in environments
+const SERVICE_URL = process.env.SUPABASE_URL || PUBLIC_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 /** Use this from Route Handlers / Server Actions to get an authed client that writes auth cookies */
