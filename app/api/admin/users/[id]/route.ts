@@ -18,11 +18,19 @@ export async function PUT(
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
+    let profile;
+    
+    // Special case for admin user
+    if (user.email === "androa687@gmail.com") {
+      profile = { role: "admin" };
+    } else {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      profile = data;
+    }
 
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -79,11 +87,19 @@ export async function DELETE(
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
+    let profile;
+    
+    // Special case for admin user
+    if (user.email === "androa687@gmail.com") {
+      profile = { role: "admin" };
+    } else {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      profile = data;
+    }
 
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });

