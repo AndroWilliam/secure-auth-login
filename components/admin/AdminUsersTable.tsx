@@ -13,8 +13,9 @@ import { EditUserDialog } from "./EditUserDialog";
 import { UserRow, UserStatus } from "@/lib/admin/types";
 import { listUsers, deleteUser } from "@/lib/admin/mockApi";
 import { getStatus, simulateIdle, forceLogout, resetToActive, subscribe } from "@/lib/admin/presenceMock";
-import { Trash2, Edit, MoreHorizontal, Search, FileDown, Plus, Users, Shield, Eye, Clock, UserX } from "lucide-react";
+import { Trash2, Edit, MoreHorizontal, Search, Plus, Users, Shield, Eye, Clock, UserX } from "lucide-react";
 import { toast } from "sonner";
+import { ExportUsersButton } from "./ExportUsersButton";
 
 interface AdminUsersTableProps {
   userRole: 'admin' | 'moderator' | 'viewer';
@@ -104,6 +105,13 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
     fetchUsers();
   };
 
+  // Get all filtered rows for export (not just paginated)
+  const getAllRows = () => {
+    // Return the full filtered dataset that the table is currently showing
+    // This includes search and filter results, not just the visible page
+    return users;
+  };
+
   const getStatusColor = (status: UserStatus) => {
     switch (status) {
       case 'active': return 'bg-green-800 text-green-200';
@@ -131,14 +139,10 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-2xl font-bold text-white">User Management</CardTitle>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-gray-600 text-gray-300 hover:bg-gray-800"
-            >
-              <FileDown className="h-4 w-4 mr-2" />
-              Export to Excel
-            </Button>
+            <ExportUsersButton 
+              getAllRows={getAllRows}
+              title="User Management Export"
+            />
             {canManageUsers && (
               <Button
                 size="sm"
