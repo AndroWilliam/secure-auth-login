@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -172,15 +173,16 @@ export function EditUserDialog({ user, isOpen, onClose, onSaved }: EditUserDialo
               />
             </div>
 
-            {/* Phone */}
+            {/* Phone with country code and 10-digit limit for EG */}
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-gray-300">Phone</Label>
-              <Input
+              <PhoneInput
                 id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                value={formData.phone || ''}
+                onChange={(val) => setFormData(prev => ({ ...prev, phone: val }))}
                 className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                placeholder="Enter phone number (e.g., +1234567890)"
+                placeholder="e.g., +20 10XXXXXXXX"
+                initialCountryCode="EG"
               />
             </div>
 

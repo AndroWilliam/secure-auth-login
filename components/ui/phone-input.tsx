@@ -32,11 +32,12 @@ interface PhoneInputProps {
   placeholder?: string
   className?: string
   id?: string
+  initialCountryCode?: string // e.g., 'EG', 'US'
 }
 
-export function PhoneInput({ value, onChange, placeholder, className, id }: PhoneInputProps) {
+export function PhoneInput({ value, onChange, placeholder, className, id, initialCountryCode }: PhoneInputProps) {
   const [selectedCountry, setSelectedCountry] = useState<Country>(
-    countries.find((country) => country.code === "EG") || countries[0],
+    countries.find((country) => country.code === (initialCountryCode || "EG")) || countries[0],
   )
 
   // Per-country national number length (digits only, excluding country code)
@@ -51,6 +52,15 @@ export function PhoneInput({ value, onChange, placeholder, className, id }: Phon
     AE: 9,
     SA: 9,
     IN: 10,
+  }
+
+  // Sync selected country from incoming value when it includes a known dial code
+  // and when the dial code changes (e.g., when editing existing numbers)
+  if (typeof window !== 'undefined') {
+    const match = countries.find(c => value?.startsWith(c.dialCode))
+    if (match && match.code !== selectedCountry.code) {
+      setSelectedCountry(match)
+    }
   }
 
   // Extract the phone number without country code
