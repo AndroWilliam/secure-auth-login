@@ -43,7 +43,8 @@ export function EditUserDialog({ user, isOpen, onClose, onSaved }: EditUserDialo
     }
   }, [user]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent<HTMLFormElement> | React.MouseEvent) => {
+    if (e && "preventDefault" in e) e.preventDefault();
     if (!user) return;
 
     // Validate form data
@@ -140,6 +141,7 @@ export function EditUserDialog({ user, isOpen, onClose, onSaved }: EditUserDialo
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[425px] bg-black border-gray-800">
+          <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="text-white">Edit User</DialogTitle>
             <DialogDescription className="text-gray-300">
@@ -215,6 +217,7 @@ export function EditUserDialog({ user, isOpen, onClose, onSaved }: EditUserDialo
 
           <DialogFooter>
             <Button 
+              type="button"
               variant="outline" 
               onClick={onClose}
               className="border-gray-600 text-gray-300 hover:bg-gray-800"
@@ -222,13 +225,14 @@ export function EditUserDialog({ user, isOpen, onClose, onSaved }: EditUserDialo
               Cancel
             </Button>
             <Button 
-              onClick={handleSubmit}
+              type="submit"
               disabled={isLoading}
               className="bg-gray-700 hover:bg-gray-600 text-white"
             >
               {isLoading ? "Updating..." : "Update User"}
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
