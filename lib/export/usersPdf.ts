@@ -12,9 +12,16 @@ export interface ExportOptions {
 }
 
 export async function exportUsersPdf(rows: UserRow[], opts: ExportOptions = {}) {
+  console.log('Starting PDF export with', rows.length, 'rows');
+  
   // Dynamic imports to avoid SSR issues
-  const { default: jsPDF } = await import('jspdf');
+  const jsPDFModule = await import('jspdf');
   await import('jspdf-autotable');
+  
+  // Handle both default and named exports
+  const jsPDF = jsPDFModule.default || jsPDFModule;
+  
+  console.log('jsPDF loaded:', !!jsPDF);
 
   const title = opts.title || 'User Management Export';
   const timestamp = new Date().toLocaleString();

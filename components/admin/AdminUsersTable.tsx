@@ -106,10 +106,27 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
   };
 
   // Get all filtered rows for export (not just paginated)
-  const getAllRows = () => {
-    // Return the full filtered dataset that the table is currently showing
-    // This includes search and filter results, not just the visible page
-    return users;
+  const getAllRows = async () => {
+    try {
+      // Fetch ALL filtered users without pagination
+      const result = await listUsers({
+        page: 1,
+        pageSize: 1000, // Large number to get all results
+        search: search || undefined,
+        roleFilter: roleFilter !== 'all' ? roleFilter : undefined,
+        statusFilter: statusFilter !== 'all' ? statusFilter : undefined,
+      });
+
+      if (result.ok) {
+        return result.data.rows;
+      } else {
+        console.error('Failed to fetch all users for export:', result.error);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching all users for export:', error);
+      return [];
+    }
   };
 
   const getStatusColor = (status: UserStatus) => {

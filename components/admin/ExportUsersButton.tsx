@@ -8,7 +8,7 @@ import { exportUsersPdf } from "@/lib/export/usersPdf";
 import { UserRow } from "@/lib/admin/types";
 
 interface ExportUsersButtonProps {
-  getAllRows: () => UserRow[];
+  getAllRows: () => Promise<UserRow[]>;
   title?: string;
 }
 
@@ -17,16 +17,21 @@ export function ExportUsersButton({ getAllRows, title }: ExportUsersButtonProps)
 
   const handleExport = async () => {
     try {
+      console.log('Export button clicked');
       setIsExporting(true);
       
-      const rows = getAllRows();
+      console.log('Fetching all rows...');
+      const rows = await getAllRows();
+      console.log('Got rows:', rows.length);
       
       if (rows.length === 0) {
         toast.error("Nothing to export");
         return;
       }
 
+      console.log('Calling exportUsersPdf...');
       const fileName = await exportUsersPdf(rows, { title });
+      console.log('Export completed:', fileName);
       
       toast.success(`Exported ${rows.length} users to PDF`);
     } catch (error) {
