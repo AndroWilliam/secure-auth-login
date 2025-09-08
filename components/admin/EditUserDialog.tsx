@@ -47,9 +47,13 @@ export function EditUserDialog({ user, isOpen, onClose, onSaved }: EditUserDialo
     if (e && "preventDefault" in e) e.preventDefault();
     if (!user) return;
 
+    // Normalize values
+    const normalizedPhone = (formData.phone || '').replace(/\s+/g, '');
+
     // Validate form data
     const validation = validateUserUpdate({
       ...formData,
+      phone: normalizedPhone || null,
       prevUpdatedAt: user.updated_at
     });
 
@@ -63,7 +67,7 @@ export function EditUserDialog({ user, isOpen, onClose, onSaved }: EditUserDialo
     try {
       const result = await updateUser(user.id, {
         full_name: formData.full_name || null,
-        phone: formData.phone || null,
+        phone: normalizedPhone || null,
         role: formData.role,
         prevUpdatedAt: user.updated_at
       });
