@@ -13,24 +13,25 @@ const mockDoc = {
   setFontSize: vi.fn(),
   setFont: vi.fn(),
   text: vi.fn(),
-  autoTable: vi.fn(),
   getNumberOfPages: vi.fn(() => 1),
   internal: {
     pageSize: {
-      width: 210,
-      height: 297
+      getHeight: vi.fn(() => 297)
     }
   },
   save: vi.fn()
 };
 
 const mockJsPDF = vi.fn(() => mockDoc);
+const mockAutoTable = vi.fn();
 
 vi.mock('jspdf', () => ({
-  default: mockJsPDF
+  jsPDF: mockJsPDF
 }));
 
-vi.mock('jspdf-autotable', () => ({}));
+vi.mock('jspdf-autotable', () => ({
+  default: mockAutoTable
+}));
 
 describe('PDF Export Integration', () => {
   beforeEach(() => {
@@ -64,20 +65,21 @@ describe('PDF Export Integration', () => {
     const fileName = await exportUsersPdf(mockUsers, { title: 'Test Export' });
 
     // Verify PDF document was created
-    expect(mockJsPDF).toHaveBeenCalledWith('landscape', 'mm', 'a4');
+    expect(mockJsPDF).toHaveBeenCalledWith({ orientation: "portrait", unit: "pt", format: "a4" });
     
     // Verify title and timestamp were added
-    expect(mockDoc.text).toHaveBeenCalledWith('Test Export', 14, 20);
-    expect(mockDoc.text).toHaveBeenCalledWith(expect.stringContaining('Generated on:'), 14, 26);
+    expect(mockDoc.text).toHaveBeenCalledWith('Test Export', 40, 30);
+    expect(mockDoc.text).toHaveBeenCalledWith(expect.stringContaining('Exported:'), 40, 46);
     
     // Verify autoTable was called with correct data
-    expect(mockDoc.autoTable).toHaveBeenCalled();
-    const autoTableCall = mockDoc.autoTable.mock.calls[0][0];
+    expect(mockAutoTable).toHaveBeenCalled();
+    const autoTableCall = mockAutoTable.mock.calls[0];
+    const [doc, options] = autoTableCall;
     
-    expect(autoTableCall.head[0]).toEqual(['#', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Date Created']);
-    expect(autoTableCall.body).toHaveLength(2);
-    expect(autoTableCall.body[0]).toEqual([1, 'Test User 1', 'test1@example.com', '+1234567890', 'Admin', 'Active', '1/1/2024']);
-    expect(autoTableCall.body[1]).toEqual([2, 'Test User 2', 'test2@example.com', '+9876543210', 'Viewer', 'Idle', '1/2/2024']);
+    expect(options.head[0]).toEqual(['#', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Date Created']);
+    expect(options.body).toHaveLength(2);
+    expect(options.body[0]).toEqual(['1', 'Test User 1', 'test1@example.com', '+1234567890', 'Admin', 'Active', '1/1/2024']);
+    expect(options.body[1]).toEqual(['2', 'Test User 2', 'test2@example.com', '+9876543210', 'Viewer', 'Idle', '1/2/2024']);
     
     // Verify PDF was saved
     expect(mockDoc.save).toHaveBeenCalled();
@@ -89,15 +91,16 @@ describe('PDF Export Integration', () => {
   it('should handle empty user list', async () => {
     const fileName = await exportUsersPdf([]);
 
-    expect(mockDoc.autoTable).toHaveBeenCalled();
-    const autoTableCall = mockDoc.autoTable.mock.calls[0][0];
-    expect(autoTableCall.body).toHaveLength(0);
+    expect(mockAutoTable).toHaveBeenCalled();
+    const autoTableCall = mockAutoTable.mock.calls[0];
+    const [doc, options] = autoTableCall;
+    expect(options.body).toHaveLength(0);
     expect(fileName).toMatch(/^users_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.pdf$/);
   });
 
   it('should use default title when not provided', async () => {
     await exportUsersPdf([]);
 
-    expect(mockDoc.text).toHaveBeenCalledWith('User Management Export', 14, 20);
+    expect(mockDoc.text).toHaveBeenCalledWith('User Management Export', 40, 30);
   });
 });

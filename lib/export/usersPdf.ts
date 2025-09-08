@@ -7,6 +7,16 @@
 
 import { UserRow } from '@/lib/admin/types';
 
+export type User = {
+  id?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;      // "Admin" | "Moderator" | "Viewer" (string OK for now)
+  status: string;    // "Active" | "Idle" | "Inactive"
+  createdAt?: string | Date;
+};
+
 export interface ExportOptions {
   title?: string;
 }
@@ -15,104 +25,62 @@ export async function exportUsersPdf(rows: UserRow[], opts: ExportOptions = {}) 
   console.log('Starting PDF export with', rows.length, 'rows');
   
   // Dynamic imports to avoid SSR issues
-  const jsPDFModule = await import('jspdf');
-  await import('jspdf-autotable');
-  
-  // Handle both default and named exports
-  const jsPDF = jsPDFModule.default || jsPDFModule;
-  
-  console.log('jsPDF loaded:', !!jsPDF);
-
-  const title = opts.title || 'User Management Export';
-  const timestamp = new Date().toLocaleString();
-  
-  // Create new PDF document
-  const doc = new jsPDF('landscape', 'mm', 'a4');
-  
-  // Add title and timestamp
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text(title, 14, 20);
-  
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Generated on: ${timestamp}`, 14, 26);
-  
-  // Prepare table data
-  const tableData = rows.map((user, index) => [
-    index + 1, // Row number
-    user.full_name || 'No name',
-    user.email,
-    user.phone || 'N/A',
-    user.role.charAt(0).toUpperCase() + user.role.slice(1),
-    user.status.charAt(0).toUpperCase() + user.status.slice(1),
-    new Date(user.created_at).toLocaleDateString()
+  const [{ jsPDF }, autoTableMod] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
   ]);
 
-  // Table columns
-  const columns = [
-    '#',
-    'Name', 
-    'Email',
-    'Phone',
-    'Role',
-    'Status',
-    'Date Created'
-  ];
+  // Handle ESM/CJS interop + v3 API
+  const autoTable =
+    (autoTableMod as any).default ||
+    (autoTableMod as any).autoTable ||
+    autoTableMod;
 
-  // Add table with autoTable
-  (doc as any).autoTable({
-    head: [columns],
-    body: tableData,
-    theme: 'grid',
-    styles: {
-      fontSize: 9,
-      cellPadding: 3,
-      overflow: 'linebreak',
-      halign: 'left',
-      valign: 'middle'
-    },
-    headStyles: {
-      fillColor: [30, 30, 30],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold'
-    },
-    alternateRowStyles: {
-      fillColor: [245, 245, 245]
-    },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 15 }, // #
-      1: { cellWidth: 35 }, // Name
-      2: { cellWidth: 50 }, // Email
-      3: { cellWidth: 30 }, // Phone
-      4: { halign: 'center', cellWidth: 20 }, // Role
-      5: { halign: 'center', cellWidth: 20 }, // Status
-      6: { halign: 'center', cellWidth: 25 }  // Date Created
-    },
-    margin: { top: 35, left: 12, right: 12 },
+  console.log('jsPDF loaded:', !!jsPDF);
+  console.log('autoTable loaded:', !!autoTable);
+
+  const title = opts.title || 'User Management Export';
+  const ts = new Date();
+  const tsLabel = ts.toLocaleString();
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+  doc.setFontSize(14);
+  doc.text(title, 40, 30);
+  doc.setFontSize(10);
+  doc.text(`Exported: ${tsLabel}`, 40, 46);
+
+  const head = [["#", "Name", "Email", "Phone", "Role", "Status", "Date Created"]];
+  const body = (rows || []).map((u, idx) => [
+    String(idx + 1),
+    u.full_name || "",
+    u.email || "",
+    u.phone || "",
+    u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1) : "",
+    u.status ? u.status.charAt(0).toUpperCase() + u.status.slice(1) : "",
+    u.created_at ? new Date(u.created_at).toLocaleDateString() : "",
+  ]);
+
+  // v3 style call: autoTable(doc, options)
+  (autoTable as any)(doc, {
+    head,
+    body,
+    theme: "grid",
+    styles: { fontSize: 10, cellPadding: 4 },
+    headStyles: { fillColor: [30, 30, 30], textColor: 255 },
+    margin: { top: 60, left: 40, right: 40, bottom: 40 },
     didDrawPage: (data: any) => {
-      // Add page numbers
-      const pageCount = doc.getNumberOfPages();
-      const currentPage = data.pageNumber;
-      
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(
-        `Page ${currentPage} of ${pageCount}`,
-        doc.internal.pageSize.width - 30,
-        doc.internal.pageSize.height - 10
-      );
-    }
+      const page = doc.getNumberOfPages();
+      doc.setFontSize(9);
+      doc.text(`Page ${page}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 20);
+    },
   });
 
-  // Generate filename with timestamp
-  const now = new Date();
-  const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-  const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-mm-ss
-  const fileName = `users_${dateStr}_${timeStr}.pdf`;
-
-  // Save the PDF
-  doc.save(fileName);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fname = `users_${ts.getFullYear()}-${pad(ts.getMonth() + 1)}-${pad(ts.getDate())}_${pad(ts.getHours())}-${pad(ts.getMinutes())}.pdf`;
   
-  return fileName;
+  doc.save(fname);
+  console.log('PDF saved as:', fname);
+  
+  return fname;
 }
