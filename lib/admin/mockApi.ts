@@ -6,7 +6,7 @@
  */
 
 import { UserRow, UserUpdateInput, UserListResponse, ApiResult, ConflictDetail } from './types';
-import { getMockUsers, getMockUserById, mockUsers } from './test-data';
+import { mockUsers } from './test-data';
 
 // In-memory store for user data (simulates database)
 let userStore: UserRow[] = [...mockUsers];
@@ -40,11 +40,43 @@ export async function listUsers(options: {
   try {
     await randomDelay();
 
-    const result = getMockUsers(options);
-    
+    const {
+      page = 1,
+      pageSize = 10,
+      search = '',
+      roleFilter = 'all',
+      statusFilter = 'all',
+    } = options;
+
+    // Work on a copy of the current in-memory store
+    let rows = [...userStore];
+
+    // Search filter
+    if (search) {
+      const q = search.toLowerCase();
+      rows = rows.filter((u) =>
+        (u.full_name ?? '').toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+      );
+    }
+
+    // Role filter
+    if (roleFilter && roleFilter !== 'all') {
+      rows = rows.filter((u) => u.role === roleFilter);
+    }
+
+    // Status filter
+    if (statusFilter && statusFilter !== 'all') {
+      rows = rows.filter((u) => u.status === statusFilter);
+    }
+
+    const total = rows.length;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const paged = rows.slice(start, end);
+
     return {
       ok: true,
-      data: result
+      data: { rows: paged, total, page, pageSize },
     };
   } catch (error) {
     console.error('[MOCK_API] listUsers error:', error);
@@ -52,7 +84,7 @@ export async function listUsers(options: {
       ok: false,
       status: 500,
       error: 'Failed to fetch users',
-      detail: error
+      detail: error,
     };
   }
 }
@@ -65,27 +97,15 @@ export async function getUser(id: string): Promise<ApiResult<UserRow>> {
   try {
     await randomDelay();
 
-    const user = getMockUserById(id);
+    const user = userStore.find((u) => u.id === id);
     if (!user) {
-      return {
-        ok: false,
-        status: 404,
-        error: 'User not found'
-      };
+      return { ok: false, status: 404, error: 'User not found' };
     }
 
-    return {
-      ok: true,
-      data: user
-    };
+    return { ok: true, data: user };
   } catch (error) {
     console.error('[MOCK_API] getUser error:', error);
-    return {
-      ok: false,
-      status: 500,
-      error: 'Failed to fetch user',
-      detail: error
-    };
+    return { ok: false, status: 500, error: 'Failed to fetch user', detail: error };
   }
 }
 
