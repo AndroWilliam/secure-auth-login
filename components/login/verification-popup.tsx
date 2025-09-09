@@ -52,9 +52,11 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
       setIsComplete(true)
 
       // Step 5: Store minimal login completion data
-      console.log("[VERIFICATION_POPUP] Step 5: Storing location data")
+      console.log("[VERIFICATION_POPUP] Step 5: Storing location data and login event")
       try {
         const coords = await getCurrentPosition()
+        let locationData = null
+        
         if (coords) {
           // Reverse geocode to get actual city and country
           let city = "Unknown"
@@ -73,7 +75,7 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
           }
           
           // Store current location for dashboard display
-          const locationData = {
+          locationData = {
             city,
             country,
             coordinates: { lat: coords.latitude, lng: coords.longitude },
@@ -90,28 +92,28 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
           } catch (error) {
             console.warn("[VERIFICATION_POPUP] Failed to store location securely:", error);
           }
+        }
 
-          // Store login_completed event
-          try {
-            const { userInfoClient } = await import("@/lib/sdk/secure-user-info-client");
-            const deviceResponse = await fetch("/api/device/generate-id", { method: "POST" });
-            const deviceData = await deviceResponse.json();
-            
-            await userInfoClient.storeEvent({
-              event_type: "login_completed",
-              event_data: {
-                userId,
-                email,
-                device_id: deviceId,
-                ipAddress: deviceData.ipAddress ?? null,
-                locationData,
-                eventTimestamp: new Date().toISOString(),
-              },
-            });
-            console.log("[VERIFICATION_POPUP] Login completed event stored successfully")
-          } catch (error) {
-            console.warn("[VERIFICATION_POPUP] Failed to store login completed event:", error);
-          }
+        // Store login_completed event
+        try {
+          const { userInfoClient } = await import("@/lib/sdk/secure-user-info-client");
+          const deviceResponse = await fetch("/api/device/generate-id", { method: "POST" });
+          const deviceData = await deviceResponse.json();
+          
+          await userInfoClient.storeEvent({
+            event_type: "login_completed",
+            event_data: {
+              userId,
+              email,
+              device_id: deviceId,
+              ipAddress: deviceData.ipAddress ?? null,
+              locationData,
+              eventTimestamp: new Date().toISOString(),
+            },
+          });
+          console.log("[VERIFICATION_POPUP] Login completed event stored successfully");
+        } catch (eventError) {
+          console.warn("[VERIFICATION_POPUP] Failed to store login event:", eventError);
         }
       } catch (locationError) {
         console.warn("Failed to get current location:", locationError)

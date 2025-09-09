@@ -117,12 +117,15 @@ export async function GET(request: NextRequest) {
       
       // Use profile role if available, otherwise resolve from email
       const role: 'admin' | 'viewer' | 'moderator' = prof?.role || resolveRole(user.email);
+      let status = computeStatus(login?.last_login_at, user.last_sign_in_at);
+      
+      // Force Active for current user
+      if (user.email === email) {
+        status = 'Active';
+      }
+      
       const displayName = prof?.display_name || humanNameFromEmail(user.email);
       const phone = prof?.phone_number ?? null;
-
-      // Force Active status for current user
-      const isCurrentUser = user.email === email;
-      const status = isCurrentUser ? 'Active' : computeStatus(login?.last_login_at, user.last_sign_in_at);
 
       return {
         id: user.id,
@@ -130,7 +133,7 @@ export async function GET(request: NextRequest) {
         createdAt: user.created_at,
         lastSignInAt: user.last_sign_in_at,
         lastLoginAt: login?.last_login_at ?? user.last_sign_in_at ?? null,
-        lastSeenAt: null, // Not using sessions for now
+        lastSeenAt: null, // We'll use lastLoginAt for now
         role,
         status,
         displayName,

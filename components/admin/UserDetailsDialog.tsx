@@ -22,12 +22,12 @@ export interface UserDetail {
   lastSignInAt?: string;
   lastLoginAt?: string;
   status: 'Active' | 'Idle' | 'Inactive';
-  lastLoginIp?: string | null;
-  lastLoginDeviceId?: string | null;
+  lastLoginIp?: string;
+  lastLoginDeviceId?: string;
   lastLoginLocation?: {
-    city?: string | null;
-    country?: string | null;
-  } | null;
+    city?: string;
+    country?: string;
+  };
 }
 
 interface UserDetailsDialogProps {
@@ -114,7 +114,7 @@ export function UserDetailsDialog({
           id: userId,
           email: formData.email,
           display_name: formData.displayName,
-          phone_number: formData.phone,
+          phone_number: formData.phoneNumber,
           role: formData.role
         })
       });

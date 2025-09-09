@@ -13,12 +13,12 @@ export interface UserDetail {
   lastSignInAt?: string;
   lastLoginAt?: string;
   status: 'Active' | 'Idle' | 'Inactive';
-  lastLoginIp?: string | null;
-  lastLoginDeviceId?: string | null;
+  lastLoginIp?: string;
+  lastLoginDeviceId?: string;
   lastLoginLocation?: {
-    city?: string | null;
-    country?: string | null;
-  } | null;
+    city?: string;
+    country?: string;
+  };
 }
 
 function calculateStatus(lastSignInAt: string | null | undefined): 'Active' | 'Idle' | 'Inactive' {
@@ -80,7 +80,7 @@ export async function GET(
     const status = calculateStatus(login?.last_login_at || authUser.last_sign_in_at);
     const displayName = profile?.display_name || getDisplayName(authUser.email);
     
-    // Prefer login event timestamp, fallback to last_sign_in_at
+    // Prefer login event last_login_at, fallback to last_sign_in_at
     const lastLoginAt = login?.last_login_at || authUser.last_sign_in_at;
 
     const userDetail: UserDetail = {

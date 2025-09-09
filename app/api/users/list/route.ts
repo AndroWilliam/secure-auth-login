@@ -91,9 +91,11 @@ export async function GET() {
       const displayName = prof?.display_name || humanNameFromEmail(user.email);
       const phone = prof?.phone_number ?? null;
 
-      // Force Active status for current user
-      const isCurrentUser = user.email === email;
-      const status = isCurrentUser ? 'Active' : computeStatus(login?.last_login_at, user.last_sign_in_at);
+      // Force Active for current user
+      let status = computeStatus(login?.last_login_at, user.last_sign_in_at);
+      if (user.email === email) {
+        status = 'Active';
+      }
 
       return {
         id: user.id,
@@ -101,7 +103,7 @@ export async function GET() {
         createdAt: user.created_at,
         lastSignInAt: user.last_sign_in_at,
         lastLoginAt: login?.last_login_at ?? user.last_sign_in_at ?? null,
-        lastSeenAt: null, // Not using sessions for now
+        lastSeenAt: null, // We'll use lastLoginAt for now
         role,
         status,
         displayName,
