@@ -5,47 +5,82 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Shield, Eye, UserCheck, Clock } from "lucide-react";
 import { AdminUsersTable } from "@/components/admin/AdminUsersTable";
-import { getUserStats } from "@/lib/admin/mockApi";
-import { initPresence, startHeartbeat } from "@/lib/admin/presenceMock";
-import { mockUsers } from "@/lib/admin/test-data";
+import { AdminUser, AdminUsersResponse } from "@/app/api/admin/users/route";
 
 interface AdminUsersPageClientProps {
   userRole: 'admin' | 'moderator' | 'viewer';
 }
 
 export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    idle: 0,
-    inactive: 0,
-    admins: 0,
-    moderators: 0,
-    viewers: 0
-  });
+  const [data, setData] = useState<AdminUsersResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize presence system and fetch stats
+  // Fetch real data from API
   useEffect(() => {
-    const initializeData = async () => {
-      // Initialize presence with mock users
-      initPresence(mockUsers);
-      
-      // Start heartbeat for real-time updates
-      startHeartbeat(30000); // 30 seconds
-      
-      // Fetch user statistics
+    const fetchData = async () => {
       try {
-        const result = await getUserStats();
-        if (result.ok) {
-          setStats(result.data);
+        setLoading(true);
+        const response = await fetch('/api/admin/users', {
+          cache: 'no-store'
+        });
+        
+        if (!response.ok) {
+          if (response.status === 403) {
+            setError('Access denied. Admin privileges required.');
+          } else {
+            setError('Failed to fetch user data');
+          }
+          return;
         }
+        
+        const result = await response.json();
+        setData(result);
       } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error('Error fetching admin data:', error);
+        setError('Failed to fetch user data');
+      } finally {
+        setLoading(false);
       }
     };
 
-    initializeData();
+    fetchData();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-300">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p className="text-gray-300">No data available</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -62,7 +97,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-300 text-sm font-medium">Total Users</p>
-                  <p className="text-2xl font-bold text-white">{stats.total}</p>
+                  <p className="text-2xl font-bold text-white">{data.totals.total}</p>
                 </div>
                 <Users className="h-8 w-8 text-gray-400" />
               </div>
@@ -74,7 +109,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-300 text-sm font-medium">Active Users</p>
-                  <p className="text-2xl font-bold text-white">{stats.active}</p>
+                  <p className="text-2xl font-bold text-white">{data.totals.active}</p>
                 </div>
                 <UserCheck className="h-8 w-8 text-gray-400" />
               </div>
@@ -86,7 +121,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-300 text-sm font-medium">Idle Users</p>
-                  <p className="text-2xl font-bold text-white">{stats.idle}</p>
+                  <p className="text-2xl font-bold text-white">{data.totals.idle}</p>
                 </div>
                 <Clock className="h-8 w-8 text-gray-400" />
               </div>
@@ -98,7 +133,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-300 text-sm font-medium">Admins</p>
-                  <p className="text-2xl font-bold text-white">{stats.admins}</p>
+                  <p className="text-2xl font-bold text-white">{data.totals.admins}</p>
                 </div>
                 <Shield className="h-8 w-8 text-gray-400" />
               </div>
@@ -129,7 +164,11 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
         </Card>
 
         {/* User Management Table */}
-        <AdminUsersTable userRole={userRole} />
+        <AdminUsersTable 
+          userRole={userRole} 
+          users={data.users}
+          onRefresh={() => window.location.reload()}
+        />
       </div>
     </div>
   );

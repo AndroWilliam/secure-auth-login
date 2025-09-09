@@ -17,12 +17,15 @@ import { Trash2, Edit, MoreHorizontal, Search, Plus, Users, Shield, Eye, Clock, 
 import { toast } from "sonner";
 import { ExportUsersButton } from "./ExportUsersButton";
 import { AddUserButton } from "./AddUserButton";
+import { AdminUser } from "@/app/api/admin/users/route";
 
 interface AdminUsersTableProps {
   userRole: 'admin' | 'moderator' | 'viewer';
+  users?: AdminUser[];
+  onRefresh?: () => void;
 }
 
-export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
+export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: AdminUsersTableProps) {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -33,23 +36,68 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
 
+  // Convert AdminUser to UserRow format
+  const convertAdminUserToUserRow = (adminUser: AdminUser): UserRow => ({
+    id: adminUser.id,
+    email: adminUser.email,
+    full_name: adminUser.displayName || null,
+    phone: null, // Not available in auth users
+    role: adminUser.role,
+    status: adminUser.status.toLowerCase() as UserStatus,
+    created_at: adminUser.createdAt,
+    updated_at: adminUser.lastSignInAt || adminUser.createdAt
+  });
+
   // Fetch users
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const result = await listUsers({
-        page,
-        pageSize: 10,
-        search: search || undefined,
-        roleFilter: roleFilter !== 'all' ? roleFilter : undefined,
-        statusFilter: statusFilter !== 'all' ? statusFilter : undefined,
-      });
-
-      if (result.ok) {
-        setUsers(result.data.rows);
-        setTotalPages(Math.ceil(result.data.total / 10));
+      if (realUsers) {
+        // Use real data from props
+        let filteredUsers = realUsers.map(convertAdminUserToUserRow);
+        
+        // Apply search filter
+        if (search) {
+          const searchLower = search.toLowerCase();
+          filteredUsers = filteredUsers.filter(user =>
+            user.full_name?.toLowerCase().includes(searchLower) ||
+            user.email.toLowerCase().includes(searchLower)
+          );
+        }
+        
+        // Apply role filter
+        if (roleFilter !== 'all') {
+          filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
+        }
+        
+        // Apply status filter
+        if (statusFilter !== 'all') {
+          filteredUsers = filteredUsers.filter(user => user.status === statusFilter);
+        }
+        
+        // Apply pagination
+        const startIndex = (page - 1) * 10;
+        const endIndex = startIndex + 10;
+        const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+        
+        setUsers(paginatedUsers);
+        setTotalPages(Math.ceil(filteredUsers.length / 10));
       } else {
-        toast.error(result.error || "Failed to fetch users");
+        // Fallback to mock data
+        const result = await listUsers({
+          page,
+          pageSize: 10,
+          search: search || undefined,
+          roleFilter: roleFilter !== 'all' ? roleFilter : undefined,
+          statusFilter: statusFilter !== 'all' ? statusFilter : undefined,
+        });
+
+        if (result.ok) {
+          setUsers(result.data.rows);
+          setTotalPages(Math.ceil(result.data.total / 10));
+        } else {
+          toast.error(result.error || "Failed to fetch users");
+        }
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -75,7 +123,7 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
   // Fetch users when filters change
   useEffect(() => {
     fetchUsers();
-  }, [page, search, roleFilter, statusFilter]);
+  }, [page, search, roleFilter, statusFilter, realUsers]);
 
   const handleEditUser = (user: UserRow) => {
     setSelectedUser(user);
@@ -151,20 +199,46 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
   // Get all filtered rows for export (not just paginated)
   const getAllRows = async () => {
     try {
-      // Fetch ALL filtered users without pagination
-      const result = await listUsers({
-        page: 1,
-        pageSize: 1000, // Large number to get all results
-        search: search || undefined,
-        roleFilter: roleFilter !== 'all' ? roleFilter : undefined,
-        statusFilter: statusFilter !== 'all' ? statusFilter : undefined,
-      });
-
-      if (result.ok) {
-        return result.data.rows;
+      if (realUsers) {
+        // Use real data from props
+        let filteredUsers = realUsers.map(convertAdminUserToUserRow);
+        
+        // Apply search filter
+        if (search) {
+          const searchLower = search.toLowerCase();
+          filteredUsers = filteredUsers.filter(user =>
+            user.full_name?.toLowerCase().includes(searchLower) ||
+            user.email.toLowerCase().includes(searchLower)
+          );
+        }
+        
+        // Apply role filter
+        if (roleFilter !== 'all') {
+          filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
+        }
+        
+        // Apply status filter
+        if (statusFilter !== 'all') {
+          filteredUsers = filteredUsers.filter(user => user.status === statusFilter);
+        }
+        
+        return filteredUsers;
       } else {
-        console.error('Failed to fetch all users for export:', result.error);
-        return [];
+        // Fallback to mock data
+        const result = await listUsers({
+          page: 1,
+          pageSize: 1000, // Large number to get all results
+          search: search || undefined,
+          roleFilter: roleFilter !== 'all' ? roleFilter : undefined,
+          statusFilter: statusFilter !== 'all' ? statusFilter : undefined,
+        });
+
+        if (result.ok) {
+          return result.data.rows;
+        } else {
+          console.error('Failed to fetch all users for export:', result.error);
+          return [];
+        }
       }
     } catch (error) {
       console.error('Error fetching all users for export:', error);
