@@ -20,6 +20,7 @@ import { AddUserButton } from "./AddUserButton";
 import { AdminUser } from "@/app/api/admin/users/route";
 import { UserListItem } from "@/app/api/users/list/route";
 import { UserRole } from "@/lib/roles";
+import { UserDetailsDialog } from "./UserDetailsDialog";
 
 interface AdminUsersTableProps {
   userRole: UserRole;
@@ -37,6 +38,8 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
   const [statusFilter, setStatusFilter] = useState("all");
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Convert AdminUser or UserListItem to UserRow format
   const convertToUserRow = (user: AdminUser | UserListItem): UserRow => ({
@@ -198,6 +201,15 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
     }
   };
 
+  const handleRowClick = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserDetails(true);
+  };
+
+  const handleUserUpdated = () => {
+    fetchUsers();
+  };
+
   // Get all filtered rows for export (not just paginated)
   const getAllRows = async () => {
     try {
@@ -273,6 +285,7 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
   const canViewFullDetails = userRole !== 'viewer';
 
   return (
+    <div>
     <Card className="w-full bg-black border-gray-800">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -335,69 +348,64 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
               <tr className="border-b border-gray-800">
                 <th className="text-left py-3 px-4 font-medium text-gray-300">#</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-300">Name</th>
-                {canViewFullDetails && (
-                  <>
-                    <th className="text-left py-3 px-4 font-medium text-gray-300">Date Created</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-300">Role</th>
-                  </>
-                )}
+                <th className="text-left py-3 px-4 font-medium text-gray-300">Email</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-300">Date Created</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-300">Mobile</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-300">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-300">Actions</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-300">Last Login</th>
+                {userRole === 'admin' && (
+                  <th className="text-left py-3 px-4 font-medium text-gray-300">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={canViewFullDetails ? 6 : 4} className="py-8 text-center text-gray-400">
+                  <td colSpan={userRole === 'admin' ? 8 : 7} className="py-8 text-center text-gray-400">
                     Loading users...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={canViewFullDetails ? 6 : 4} className="py-8 text-center text-gray-400">
+                  <td colSpan={userRole === 'admin' ? 8 : 7} className="py-8 text-center text-gray-400">
                     No users found
                   </td>
                 </tr>
               ) : (
                 users.map((user, index) => (
-                  <tr key={user.id} className="border-b border-gray-800 hover:bg-gray-900">
+                  <tr 
+                    key={user.id} 
+                    className="border-b border-gray-800 hover:bg-gray-900 cursor-pointer"
+                    onClick={() => handleRowClick(user.id)}
+                  >
                     <td className="py-4 px-4 text-sm text-gray-300">
                       {(page - 1) * 10 + index + 1}
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-gray-700 text-gray-200">
-                            {user.full_name?.split(' ').map(n => n[0]).join('') || user.email[0].toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-white">
-                            {user.full_name || 'No name'}
-                          </div>
-                          <div className="text-sm text-gray-400">{user.email}</div>
-                        </div>
+                      <div className="font-medium text-white">
+                        {user.full_name || 'No name'}
                       </div>
                     </td>
-                    {canViewFullDetails && (
-                      <>
-                        <td className="py-4 px-4 text-sm text-gray-300">
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="py-4 px-4">
-                          <Badge className={getRoleColor(user.role)}>
-                            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                          </Badge>
-                        </td>
-                      </>
-                    )}
+                    <td className="py-4 px-4 text-sm text-gray-300">
+                      {user.email}
+                    </td>
+                    <td className="py-4 px-4 text-sm text-gray-300">
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="py-4 px-4 text-sm text-gray-300">
+                      {user.phone || 'N/A'}
+                    </td>
                     <td className="py-4 px-4">
                       <Badge className={getStatusColor(user.status)}>
                         {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
+                    <td className="py-4 px-4 text-sm text-gray-300">
+                      {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
+                    </td>
+                    {userRole === 'admin' && (
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
                         {/* Approve/Reject buttons for inviting status */}
                         {user.status === 'inviting' && userRole === 'admin' && (
                           <>
@@ -504,8 +512,9 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
-                      </div>
-                    </td>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -554,5 +563,20 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
         onSaved={handleUserSaved}
       />
     </Card>
+
+    {/* User Details Dialog */}
+    {selectedUserId && (
+      <UserDetailsDialog
+        userId={selectedUserId}
+        userRole={userRole}
+        open={showUserDetails}
+        onOpenChange={(open) => {
+          setShowUserDetails(open);
+          if (!open) setSelectedUserId(null);
+        }}
+        onUpdated={handleUserUpdated}
+      />
+    )}
+  </div>
   );
 }

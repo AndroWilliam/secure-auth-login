@@ -8,9 +8,11 @@ export interface AdminUser {
   email: string;
   createdAt: string;
   lastSignInAt?: string | null;
+  lastLoginAt?: string | null;
   role: 'admin' | 'viewer';
   status: 'Active' | 'Idle' | 'Inactive';
   displayName?: string;
+  phoneNumber?: string;
 }
 
 export interface AdminUsersResponse {
@@ -102,20 +104,56 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get profiles data for all users
+    const userIds = allUsers.map(u => u.id);
+    const { data: profiles } = await serviceClient
+      .from('profiles')
+      .select('id, display_name, phone_number, role')
+      .in('id', userIds);
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+    // Get latest login events for each user
+    const { data: loginEvents } = await serviceClient
+      .from('user_info_events')
+      .select('user_id, created_at, event_data')
+      .in('user_id', userIds)
+      .in('event_type', ['login_completed', 'login_attempt'])
+      .order('created_at', { ascending: false });
+
+    // Group events by user_id and get the latest for each
+    const latestEvents = new Map<string, any>();
+    loginEvents?.forEach(event => {
+      if (!latestEvents.has(event.user_id)) {
+        latestEvents.set(event.user_id, event);
+      }
+    });
+
     // Transform users to AdminUser format
     const adminUsers: AdminUser[] = allUsers.map(user => {
-      const role: 'admin' | 'viewer' = user.email === 'androa687@gmail.com' ? 'admin' : 'viewer';
+      const profile = profileMap.get(user.id);
+      const latestEvent = latestEvents.get(user.id);
+      
+      // Use profile role if available, otherwise resolve from email
+      const role: 'admin' | 'viewer' = profile?.role || (user.email === 'androa687@gmail.com' ? 'admin' : 'viewer');
       const status = calculateStatus(user.last_sign_in_at);
-      const displayName = getDisplayName(user.email);
+      const displayName = profile?.display_name || getDisplayName(user.email);
+      
+      // Prefer login_completed event timestamp, fallback to last_sign_in_at
+      const lastLoginAt = latestEvent?.event_type === 'login_completed' 
+        ? latestEvent.created_at 
+        : user.last_sign_in_at;
 
       return {
         id: user.id,
         email: user.email,
         createdAt: user.created_at,
         lastSignInAt: user.last_sign_in_at,
+        lastLoginAt,
         role,
         status,
-        displayName
+        displayName,
+        phoneNumber: profile?.phone_number || null
       };
     });
 
