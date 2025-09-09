@@ -59,9 +59,9 @@ export async function POST(request: NextRequest) {
     const templates = getEmailTemplates();
     const origin = getOrigin();
     const subject = templates.userInvite.subject(invite.name);
-    const body = templates.userInvite.body(invite.name, origin, updatedInvite.token);
+    const emailBody = templates.userInvite.body(invite.name, origin, updatedInvite.token);
     
-    await sendEmail(subject, body, invite.email);
+    await sendEmail(subject, emailBody, invite.email);
 
     const response: InviteResponse = {
       success: true,

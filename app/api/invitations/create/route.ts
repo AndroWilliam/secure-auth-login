@@ -60,9 +60,9 @@ export async function POST(request: NextRequest) {
       const templates = getEmailTemplates();
       const origin = getOrigin();
       const subject = templates.userInvite.subject(name);
-      const body = templates.userInvite.body(name, origin, invite.token!);
+      const emailBody = templates.userInvite.body(name, origin, invite.token!);
       
-      await sendEmail(subject, body, email);
+      await sendEmail(subject, emailBody, email);
       
       message = `Invitation email sent to ${email}`;
     } else {
@@ -79,12 +79,12 @@ export async function POST(request: NextRequest) {
       const templates = getEmailTemplates();
       const origin = getOrigin();
       const subject = templates.adminRequest.subject('Moderator', name);
-      const body = templates.adminRequest.body('Moderator', name, email, origin);
+      const emailBody = templates.adminRequest.body('Moderator', name, email, origin);
       
       // TODO: Get admin emails from environment or database
       const adminEmails = ['androa687@gmail.com']; // For now, hardcoded
       for (const adminEmail of adminEmails) {
-        await sendEmail(subject, body, adminEmail);
+        await sendEmail(subject, emailBody, adminEmail);
       }
       
       message = `Request sent to admins for ${email}`;
