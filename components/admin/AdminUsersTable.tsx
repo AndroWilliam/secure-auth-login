@@ -13,9 +13,10 @@ import { EditUserDialog } from "./EditUserDialog";
 import { UserRow, UserStatus } from "@/lib/admin/types";
 import { listUsers, deleteUser } from "@/lib/admin/mockApi";
 import { getStatus, simulateIdle, forceLogout, resetToActive, subscribe } from "@/lib/admin/presenceMock";
-import { Trash2, Edit, MoreHorizontal, Search, Plus, Users, Shield, Eye, Clock, UserX } from "lucide-react";
+import { Trash2, Edit, MoreHorizontal, Search, Plus, Users, Shield, Eye, Clock, UserX, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { ExportUsersButton } from "./ExportUsersButton";
+import { AddUserButton } from "./AddUserButton";
 
 interface AdminUsersTableProps {
   userRole: 'admin' | 'moderator' | 'viewer';
@@ -105,6 +106,48 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
     fetchUsers();
   };
 
+  const handleApproveInvite = async (userId: string) => {
+    try {
+      const response = await fetch('/api/invitations/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message);
+        fetchUsers();
+      } else {
+        toast.error(result.error || "Failed to approve invitation");
+      }
+    } catch (error) {
+      console.error("Error approving invitation:", error);
+      toast.error("Failed to approve invitation");
+    }
+  };
+
+  const handleRejectInvite = async (userId: string) => {
+    try {
+      const response = await fetch('/api/invitations/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message);
+        fetchUsers();
+      } else {
+        toast.error(result.error || "Failed to reject invitation");
+      }
+    } catch (error) {
+      console.error("Error rejecting invitation:", error);
+      toast.error("Failed to reject invitation");
+    }
+  };
+
   // Get all filtered rows for export (not just paginated)
   const getAllRows = async () => {
     try {
@@ -134,6 +177,9 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
       case 'active': return 'bg-green-800 text-green-200';
       case 'idle': return 'bg-yellow-800 text-yellow-200';
       case 'inactive': return 'bg-red-800 text-red-200';
+      case 'inviting': return 'bg-yellow-600 text-yellow-100';
+      case 'invited': return 'bg-blue-800 text-blue-200';
+      case 'rejected': return 'bg-gray-600 text-gray-200';
       default: return 'bg-gray-800 text-gray-200';
     }
   };
@@ -161,13 +207,10 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
               title="User Management Export"
             />
             {canManageUsers && (
-              <Button
-                size="sm"
-                className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add New User
-              </Button>
+              <AddUserButton 
+                currentUserRole={userRole}
+                onUserAdded={fetchUsers}
+              />
             )}
           </div>
         </div>
@@ -279,7 +322,32 @@ export function AdminUsersTable({ userRole }: AdminUsersTableProps) {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
-                        {canManageUsers && (
+                        {/* Approve/Reject buttons for inviting status */}
+                        {user.status === 'inviting' && userRole === 'admin' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleApproveInvite(user.id)}
+                              className="h-8 w-8 p-0 hover:bg-green-700"
+                              title="Approve invitation"
+                            >
+                              <Check className="h-4 w-4 text-green-300" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRejectInvite(user.id)}
+                              className="h-8 w-8 p-0 hover:bg-red-700"
+                              title="Reject invitation"
+                            >
+                              <X className="h-4 w-4 text-red-300" />
+                            </Button>
+                          </>
+                        )}
+
+                        {/* Edit/Delete buttons for regular users */}
+                        {user.status !== 'inviting' && canManageUsers && (
                           <>
                             <Button
                               variant="ghost"

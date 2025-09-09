@@ -67,17 +67,40 @@ export const mockUsers: UserRow[] = [
     status: 'active',
     created_at: '2024-02-15T11:20:00.000Z',
     updated_at: '2024-02-15T11:20:00.000Z'
+  },
+  // Add some invitation examples
+  {
+    id: 'invite-1',
+    email: 'newuser@example.com',
+    full_name: 'New User',
+    phone: null,
+    role: 'viewer',
+    status: 'inviting',
+    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+  },
+  {
+    id: 'invite-2',
+    email: 'invited@example.com',
+    full_name: 'Invited User',
+    phone: null,
+    role: 'moderator',
+    status: 'invited',
+    created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
   }
 ];
 
 export const mockUserStats = {
-  total: 6,
+  total: 8,
   active: 4,
   idle: 1,
   inactive: 1,
   admins: 1,
   moderators: 2,
-  viewers: 3
+  viewers: 3,
+  inviting: 1,
+  invited: 1
 };
 
 // Helper to get a user by ID
