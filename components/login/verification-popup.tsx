@@ -90,6 +90,28 @@ export function VerificationPopup({ onComplete, deviceId, userId, email, onDirec
           } catch (error) {
             console.warn("[VERIFICATION_POPUP] Failed to store location securely:", error);
           }
+
+          // Store login_completed event
+          try {
+            const { userInfoClient } = await import("@/lib/sdk/secure-user-info-client");
+            const deviceResponse = await fetch("/api/device/generate-id", { method: "POST" });
+            const deviceData = await deviceResponse.json();
+            
+            await userInfoClient.storeEvent({
+              event_type: "login_completed",
+              event_data: {
+                userId,
+                email,
+                device_id: deviceId,
+                ipAddress: deviceData.ipAddress ?? null,
+                locationData,
+                eventTimestamp: new Date().toISOString(),
+              },
+            });
+            console.log("[VERIFICATION_POPUP] Login completed event stored successfully")
+          } catch (error) {
+            console.warn("[VERIFICATION_POPUP] Failed to store login completed event:", error);
+          }
         }
       } catch (locationError) {
         console.warn("Failed to get current location:", locationError)

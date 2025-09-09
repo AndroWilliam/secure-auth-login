@@ -7,17 +7,18 @@ export interface UserDetail {
   id: string;
   email: string;
   displayName: string;
-  phoneNumber?: string;
+  phone?: string;
   role: 'admin' | 'viewer' | 'moderator';
   createdAt: string;
   lastSignInAt?: string;
   lastLoginAt?: string;
   status: 'Active' | 'Idle' | 'Inactive';
-  security?: {
-    ip?: string | null;
-    deviceFingerprint?: string | null;
-    location?: any | null;
-  };
+  lastLoginIp?: string | null;
+  lastLoginDeviceId?: string | null;
+  lastLoginLocation?: {
+    city?: string | null;
+    country?: string | null;
+  } | null;
 }
 
 function calculateStatus(lastSignInAt: string | null | undefined): 'Active' | 'Idle' | 'Inactive' {
@@ -66,35 +67,38 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Get profile data and session data
-    const [{ data: profile }, { data: session }] = await Promise.all([
+    // Get profile data and latest login events
+    const [{ data: profile }, { data: latestLogins }] = await Promise.all([
       serviceClient.from('profiles').select('display_name, phone_number, role').eq('id', userId).single(),
-      serviceClient.from('user_sessions').select('*').eq('user_id', userId).single()
+      serviceClient.rpc('get_latest_login_events', { user_ids: [userId] })
     ]);
 
+    const login = latestLogins?.[0];
+    
     // Use profile role if available, otherwise resolve from email
     const role = profile?.role || resolveRole(authUser.email);
-    const status = calculateStatus(session?.last_seen_at || authUser.last_sign_in_at);
+    const status = calculateStatus(login?.last_login_at || authUser.last_sign_in_at);
     const displayName = profile?.display_name || getDisplayName(authUser.email);
     
-    // Prefer session last_login_at, fallback to last_sign_in_at
-    const lastLoginAt = session?.last_login_at || authUser.last_sign_in_at;
+    // Prefer login event timestamp, fallback to last_sign_in_at
+    const lastLoginAt = login?.last_login_at || authUser.last_sign_in_at;
 
     const userDetail: UserDetail = {
       id: authUser.id,
       email: authUser.email,
       displayName,
-      phoneNumber: profile?.phone_number || null,
+      phone: profile?.phone_number || null,
       role,
       createdAt: authUser.created_at,
       lastSignInAt: authUser.last_sign_in_at,
       lastLoginAt,
       status,
-      security: {
-        ip: session?.last_ip || null,
-        deviceFingerprint: session?.last_device_fingerprint || null,
-        location: session?.last_location || null,
-      }
+      lastLoginIp: login?.last_ip || null,
+      lastLoginDeviceId: login?.last_device_id || null,
+      lastLoginLocation: login?.last_city || login?.last_country ? {
+        city: login?.last_city || null,
+        country: login?.last_country || null,
+      } : null,
     };
 
     return NextResponse.json({

@@ -13,12 +13,13 @@ export interface AdminUser {
   role: 'admin' | 'viewer' | 'moderator';
   status: 'Active' | 'Idle' | 'Inactive';
   displayName?: string;
-  phoneNumber?: string | null;
-  security?: {
-    ip?: string | null;
-    deviceFingerprint?: string | null;
-    location?: any | null;
-  }
+  phone?: string | null;
+  lastLoginIp?: string | null;
+  lastLoginDeviceId?: string | null;
+  lastLoginLocation?: {
+    city?: string | null;
+    country?: string | null;
+  } | null;
 }
 
 export interface AdminUsersResponse {
@@ -100,42 +101,46 @@ export async function GET(request: NextRequest) {
 
     const ids = allUsers.map(u => u.id);
 
-    // Batch fetch profiles + sessions
-    const [{ data: profiles }, { data: sessions }] = await Promise.all([
+    // Batch fetch profiles + latest login events
+    const [{ data: profiles }, { data: latestLogins }] = await Promise.all([
       serviceClient.from("profiles").select("id, display_name, phone_number").in("id", ids),
-      serviceClient.from("user_sessions").select("*").in("user_id", ids),
+      serviceClient.rpc('get_latest_login_events', { user_ids: ids }),
     ]);
 
     const pMap = new Map<string, any>((profiles ?? []).map(p => [p.id, p]));
-    const sMap = new Map<string, any>((sessions ?? []).map(s => [s.user_id, s]));
+    const lMap = new Map<string, any>((latestLogins ?? []).map((l: any) => [l.user_id, l]));
 
     // Transform users to AdminUser format
     const adminUsers: AdminUser[] = allUsers.map(user => {
       const prof = pMap.get(user.id);
-      const sess = sMap.get(user.id);
+      const login = lMap.get(user.id);
       
       // Use profile role if available, otherwise resolve from email
-      const role: 'admin' | 'viewer' = prof?.role || resolveRole(user.email);
-      const status = computeStatus(sess?.last_seen_at, user.last_sign_in_at);
+      const role: 'admin' | 'viewer' | 'moderator' = prof?.role || resolveRole(user.email);
       const displayName = prof?.display_name || humanNameFromEmail(user.email);
-      const phoneNumber = prof?.phone_number ?? null;
+      const phone = prof?.phone_number ?? null;
+
+      // Force Active status for current user
+      const isCurrentUser = user.email === email;
+      const status = isCurrentUser ? 'Active' : computeStatus(login?.last_login_at, user.last_sign_in_at);
 
       return {
         id: user.id,
         email: user.email,
         createdAt: user.created_at,
         lastSignInAt: user.last_sign_in_at,
-        lastLoginAt: sess?.last_login_at ?? user.last_sign_in_at ?? null,
-        lastSeenAt: sess?.last_seen_at ?? null,
+        lastLoginAt: login?.last_login_at ?? user.last_sign_in_at ?? null,
+        lastSeenAt: null, // Not using sessions for now
         role,
         status,
         displayName,
-        phoneNumber,
-        security: {
-          ip: sess?.last_ip ?? null,
-          deviceFingerprint: sess?.last_device_fingerprint ?? null,
-          location: sess?.last_location ?? null,
-        }
+        phone,
+        lastLoginIp: login?.last_ip ?? null,
+        lastLoginDeviceId: login?.last_device_id ?? null,
+        lastLoginLocation: login?.last_city || login?.last_country ? {
+          city: login?.last_city ?? null,
+          country: login?.last_country ?? null,
+        } : null,
       };
     });
 

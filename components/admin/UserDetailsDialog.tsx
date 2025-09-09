@@ -16,22 +16,18 @@ export interface UserDetail {
   id: string;
   email: string;
   displayName: string;
-  phoneNumber?: string;
+  phone?: string;
   role: 'admin' | 'viewer' | 'moderator';
   createdAt: string;
   lastSignInAt?: string;
   lastLoginAt?: string;
   status: 'Active' | 'Idle' | 'Inactive';
-  ipAddress?: string;
-  deviceFingerprint?: string;
-  location?: {
-    city?: string;
-    country?: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
-  };
+  lastLoginIp?: string | null;
+  lastLoginDeviceId?: string | null;
+  lastLoginLocation?: {
+    city?: string | null;
+    country?: string | null;
+  } | null;
 }
 
 interface UserDetailsDialogProps {
@@ -58,7 +54,7 @@ export function UserDetailsDialog({
   const [formData, setFormData] = useState({
     email: '',
     displayName: '',
-    phoneNumber: '',
+    phone: '',
     role: 'viewer' as 'admin' | 'viewer'
   });
 
@@ -91,7 +87,7 @@ export function UserDetailsDialog({
       setFormData({
         email: result.user.email,
         displayName: result.user.displayName,
-        phoneNumber: result.user.phoneNumber || '',
+        phone: result.user.phone || '',
         role: result.user.role
       });
     } catch (err) {
@@ -118,7 +114,7 @@ export function UserDetailsDialog({
           id: userId,
           email: formData.email,
           display_name: formData.displayName,
-          phone_number: formData.phoneNumber,
+          phone_number: formData.phone,
           role: formData.role
         })
       });
@@ -217,11 +213,11 @@ export function UserDetailsDialog({
               />
             </div>
             <div>
-              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Label htmlFor="phone">Phone Number</Label>
               <Input
-                id="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 disabled={userRole !== 'admin'}
                 className="mt-1"
               />
@@ -271,19 +267,19 @@ export function UserDetailsDialog({
               <div>
                 <Label>IP Address</Label>
                 <p className="mt-1 text-sm text-gray-600 font-mono">
-                  {user.security?.ip || 'Unknown'}
+                  {user.lastLoginIp || 'Unknown'}
                 </p>
               </div>
               <div>
                 <Label>Device Fingerprint</Label>
                 <p className="mt-1 text-sm text-gray-600 font-mono break-all">
-                  {user.security?.deviceFingerprint || 'Unknown'}
+                  {user.lastLoginDeviceId || 'Unknown'}
                 </p>
               </div>
               <div className="md:col-span-2">
                 <Label>Location</Label>
                 <p className="mt-1 text-sm text-gray-600">
-                  {fmtLocation(user.security?.location)}
+                  {fmtLocation(user.lastLoginLocation)}
                 </p>
               </div>
             </div>

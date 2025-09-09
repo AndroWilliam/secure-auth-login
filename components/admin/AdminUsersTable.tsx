@@ -394,7 +394,7 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                       {fmtDate(user.createdAt)}
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-300">
-                      {fmtPhone(user.phoneNumber)}
+                      {fmtPhone(user.phone)}
                     </td>
                     <td className="py-4 px-4">
                       <Badge className={getStatusColor(user.status)}>
