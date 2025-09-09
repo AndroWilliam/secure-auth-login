@@ -63,23 +63,23 @@ TO authenticated
 USING (true);
 
 -- Create a view for user management that combines users and invitations
+-- Note: This view will be created after we verify the actual column names in profiles table
+-- For now, we'll create a basic view that works with the current schema
+
 CREATE OR REPLACE VIEW public.user_management_view AS
 SELECT 
   u.id,
   u.email,
-  COALESCE(p.full_name, i.name) as full_name,
-  COALESCE(p.phone, NULL) as phone,
-  COALESCE(p.role::text, i.role::text) as role,
+  COALESCE(i.name, 'No Name') as full_name,
+  NULL as phone,
+  COALESCE(i.role::text, 'viewer') as role,
   CASE 
     WHEN i.id IS NOT NULL THEN i.status::text
-    WHEN p.last_seen IS NOT NULL AND p.last_seen > NOW() - INTERVAL '5 minutes' THEN 'active'
-    WHEN p.last_seen IS NOT NULL AND p.last_seen > NOW() - INTERVAL '30 minutes' THEN 'idle'
     ELSE 'inactive'
   END as status,
-  COALESCE(p.created_at, i.created_at) as created_at,
-  COALESCE(p.updated_at, i.updated_at) as updated_at
+  COALESCE(i.created_at, u.created_at) as created_at,
+  COALESCE(i.updated_at, u.updated_at) as updated_at
 FROM auth.users u
-LEFT JOIN public.profiles p ON u.id = p.id
 LEFT JOIN public.user_invitations i ON u.email = i.email
 WHERE u.email IS NOT NULL;
 
