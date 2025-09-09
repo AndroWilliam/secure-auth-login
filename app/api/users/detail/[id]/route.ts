@@ -8,20 +8,15 @@ export interface UserDetail {
   email: string;
   displayName: string;
   phoneNumber?: string;
-  role: 'admin' | 'viewer';
+  role: 'admin' | 'viewer' | 'moderator';
   createdAt: string;
   lastSignInAt?: string;
   lastLoginAt?: string;
   status: 'Active' | 'Idle' | 'Inactive';
-  ipAddress?: string;
-  deviceFingerprint?: string;
-  location?: {
-    city?: string;
-    country?: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
+  security?: {
+    ip?: string | null;
+    deviceFingerprint?: string | null;
+    location?: any | null;
   };
 }
 
@@ -71,52 +66,19 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Get profile data
-    const { data: profile } = await serviceClient
-      .from('profiles')
-      .select('display_name, phone_number, role')
-      .eq('id', userId)
-      .single();
-
-    // Get latest login events
-    const { data: loginEvents } = await serviceClient
-      .from('user_info_events')
-      .select('created_at, event_data, event_type')
-      .eq('user_id', userId)
-      .in('event_type', ['login_completed', 'login_attempt'])
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const latestEvent = loginEvents?.[0];
-    
-    // Extract data from latest event
-    let ipAddress: string | undefined;
-    let deviceFingerprint: string | undefined;
-    let location: UserDetail['location'] | undefined;
-
-    if (latestEvent?.event_data) {
-      const eventData = latestEvent.event_data;
-      ipAddress = eventData.ipAddress;
-      deviceFingerprint = eventData.device_id || eventData.hardwareFingerprint;
-      
-      if (eventData.locationData) {
-        location = {
-          city: eventData.locationData.city,
-          country: eventData.locationData.country,
-          coordinates: eventData.locationData.coordinates
-        };
-      }
-    }
+    // Get profile data and session data
+    const [{ data: profile }, { data: session }] = await Promise.all([
+      serviceClient.from('profiles').select('display_name, phone_number, role').eq('id', userId).single(),
+      serviceClient.from('user_sessions').select('*').eq('user_id', userId).single()
+    ]);
 
     // Use profile role if available, otherwise resolve from email
     const role = profile?.role || resolveRole(authUser.email);
-    const status = calculateStatus(authUser.last_sign_in_at);
+    const status = calculateStatus(session?.last_seen_at || authUser.last_sign_in_at);
     const displayName = profile?.display_name || getDisplayName(authUser.email);
     
-    // Prefer login_completed event timestamp, fallback to last_sign_in_at
-    const lastLoginAt = latestEvent?.event_type === 'login_completed' 
-      ? latestEvent.created_at 
-      : authUser.last_sign_in_at;
+    // Prefer session last_login_at, fallback to last_sign_in_at
+    const lastLoginAt = session?.last_login_at || authUser.last_sign_in_at;
 
     const userDetail: UserDetail = {
       id: authUser.id,
@@ -128,9 +90,11 @@ export async function GET(
       lastSignInAt: authUser.last_sign_in_at,
       lastLoginAt,
       status,
-      ipAddress,
-      deviceFingerprint,
-      location
+      security: {
+        ip: session?.last_ip || null,
+        deviceFingerprint: session?.last_device_fingerprint || null,
+        location: session?.last_location || null,
+      }
     };
 
     return NextResponse.json({

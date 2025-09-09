@@ -10,13 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { UserRole } from "@/lib/roles";
 import { toast } from "sonner";
 import { Loader2, Save, X } from "lucide-react";
+import { fmtDate, fmtPhone, fmtLocation } from "@/lib/utils/format";
 
 export interface UserDetail {
   id: string;
   email: string;
   displayName: string;
   phoneNumber?: string;
-  role: 'admin' | 'viewer';
+  role: 'admin' | 'viewer' | 'moderator';
   createdAt: string;
   lastSignInAt?: string;
   lastLoginAt?: string;
@@ -153,21 +154,6 @@ export function UserDetailsDialog({
     }
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleString();
-  };
-
-  const formatLocation = (location?: UserDetail['location']) => {
-    if (!location) return 'Unknown';
-    const parts = [];
-    if (location.city) parts.push(location.city);
-    if (location.country) parts.push(location.country);
-    if (location.coordinates) {
-      parts.push(`(${location.coordinates.lat.toFixed(4)}, ${location.coordinates.lng.toFixed(4)})`);
-    }
-    return parts.join(', ') || 'Unknown';
-  };
 
   if (loading) {
     return (
@@ -270,15 +256,11 @@ export function UserDetailsDialog({
             </div>
             <div>
               <Label>Account Created</Label>
-              <p className="mt-1 text-sm text-gray-600">{formatDate(user.createdAt)}</p>
-            </div>
-            <div>
-              <Label>Last Sign In</Label>
-              <p className="mt-1 text-sm text-gray-600">{formatDate(user.lastSignInAt)}</p>
+              <p className="mt-1 text-sm text-gray-600">{fmtDate(user.createdAt)}</p>
             </div>
             <div>
               <Label>Last Login</Label>
-              <p className="mt-1 text-sm text-gray-600">{formatDate(user.lastLoginAt)}</p>
+              <p className="mt-1 text-sm text-gray-600">{fmtDate(user.lastLoginAt)}</p>
             </div>
           </div>
 
@@ -289,19 +271,19 @@ export function UserDetailsDialog({
               <div>
                 <Label>IP Address</Label>
                 <p className="mt-1 text-sm text-gray-600 font-mono">
-                  {user.ipAddress || 'Unknown'}
+                  {user.security?.ip || 'Unknown'}
                 </p>
               </div>
               <div>
                 <Label>Device Fingerprint</Label>
                 <p className="mt-1 text-sm text-gray-600 font-mono break-all">
-                  {user.deviceFingerprint || 'Unknown'}
+                  {user.security?.deviceFingerprint || 'Unknown'}
                 </p>
               </div>
               <div className="md:col-span-2">
                 <Label>Location</Label>
                 <p className="mt-1 text-sm text-gray-600">
-                  {formatLocation(user.location)}
+                  {fmtLocation(user.security?.location)}
                 </p>
               </div>
             </div>

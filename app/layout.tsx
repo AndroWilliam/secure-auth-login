@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 import { UserInfoProvider } from "@/lib/providers/user-info-provider"
 import { ThemeProvider } from "@/components/theme-provider"
+import PresenceBeacon from "@/components/PresenceBeacon"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body>
         <Suspense fallback={null}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <PresenceBeacon />
             <UserInfoProvider>{children}</UserInfoProvider>
           </ThemeProvider>
         </Suspense>

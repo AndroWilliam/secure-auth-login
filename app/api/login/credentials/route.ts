@@ -5,9 +5,12 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const SERVICE_URL = process.env.SUPABASE_URL || URL;
+const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +35,7 @@ export async function POST(req: NextRequest) {
         },
         // 🔧 FIX: delete signature must be (name, options?) — not an object.
         remove(name: string, options?: any) {
-          cookieStore.delete(name, options);
+          cookieStore.delete(name);
         },
       },
     });
@@ -47,6 +50,19 @@ export async function POST(req: NextRequest) {
         { ok: false, error: "AUTH_FAILED", detail: error.message },
         { status: 401 }
       );
+    }
+
+    // Store last_login_at in user_sessions
+    try {
+      if (data.user?.id) {
+        const svc = createServiceClient(SERVICE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+        await svc.from("user_sessions").upsert(
+          { user_id: data.user.id, last_login_at: new Date().toISOString() },
+          { onConflict: "user_id" }
+        );
+      }
+    } catch (e) {
+      console.warn("[LOGIN] Failed to upsert last_login_at:", e);
     }
 
     // Return the minimal shape the frontend expects

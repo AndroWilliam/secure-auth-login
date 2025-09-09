@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionEmail, getSessionRole } from "@/lib/session";
+import { getSessionEmail } from "@/lib/session";
 import { resolveRole } from "@/lib/roles";
 
 export interface UserListItem {
@@ -9,10 +9,16 @@ export interface UserListItem {
   createdAt: string;
   lastSignInAt?: string | null;
   lastLoginAt?: string | null;
-  role: 'admin' | 'viewer';
+  lastSeenAt?: string | null;
+  role: 'admin' | 'viewer' | 'moderator';
   status: 'Active' | 'Idle' | 'Inactive';
   displayName?: string;
-  phoneNumber?: string;
+  phoneNumber?: string | null;
+  security?: {
+    ip?: string | null;
+    deviceFingerprint?: string | null;
+    location?: any | null;
+  }
 }
 
 export interface UserListResponse {
@@ -27,60 +33,36 @@ export interface UserListResponse {
   error?: string;
 }
 
-function calculateStatus(lastSignInAt: string | null | undefined): 'Active' | 'Idle' | 'Inactive' {
-  if (!lastSignInAt) return 'Inactive';
-  
-  const now = Date.now();
-  const lastSignIn = new Date(lastSignInAt).getTime();
-  const deltaMinutes = (now - lastSignIn) / 60000;
-  
-  if (deltaMinutes <= 5) return 'Active';
-  if (deltaMinutes <= 30) return 'Idle';
+function computeStatus(lastSeenAt?: string | null, lastSignInAt?: string | null): 'Active' | 'Idle' | 'Inactive' {
+  const ref = lastSeenAt ?? lastSignInAt;
+  if (!ref) return 'Inactive';
+  const deltaMin = (Date.now() - new Date(ref).getTime()) / 60000;
+  if (deltaMin <= 5) return 'Active';
+  if (deltaMin <= 30) return 'Idle';
   return 'Inactive';
 }
 
-function getDisplayName(email: string): string {
-  const localPart = email.split('@')[0];
-  return localPart
-    .split('.')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+function humanNameFromEmail(email: string): string {
+  const local = email.split("@")[0];
+  return local.split(".").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
 }
 
 export async function GET() {
   try {
-    // Check authentication
     const email = await getSessionEmail();
-    if (!email) {
-      console.log('GET /api/users/list: No authenticated user');
-      return NextResponse.json({ 
-        ok: false, 
-        error: 'UNAUTHORIZED' 
-      }, { status: 401 });
-    }
+    if (!email) return NextResponse.json({ ok: false, error: 'UNAUTHORIZED' }, { status: 401 });
 
-    // Get service client for admin operations
     const serviceClient = createServiceClient();
-    
-    // Fetch all users using pagination
+
+    // 1) Auth users (paged)
     const allUsers: any[] = [];
     let page = 1;
     const perPage = 200;
     let hasMore = true;
 
     while (hasMore) {
-      const { data: users, error } = await serviceClient.auth.admin.listUsers({
-        page,
-        perPage
-      });
-
-      if (error) {
-        console.error('Error fetching users in /api/users/list:', error);
-        return NextResponse.json({
-          ok: false,
-          error: 'FAILED_TO_FETCH_USERS'
-        }, { status: 500 });
-      }
+      const { data: users, error } = await serviceClient.auth.admin.listUsers({ page, perPage });
+      if (error) return NextResponse.json({ ok: false, error: 'FAILED_TO_FETCH_USERS' }, { status: 500 });
 
       if (users && users.users.length > 0) {
         allUsers.push(...users.users);
@@ -90,82 +72,55 @@ export async function GET() {
       }
     }
 
-    // Get profiles data for all users
-    const userIds = allUsers.map(u => u.id);
-    const { data: profiles } = await serviceClient
-      .from('profiles')
-      .select('id, display_name, phone_number, role')
-      .in('id', userIds);
+    const ids = allUsers.map(u => u.id);
 
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+    // 2) Batch fetch profiles + sessions
+    const [{ data: profiles }, { data: sessions }] = await Promise.all([
+      serviceClient.from("profiles").select("id, display_name, phone_number").in("id", ids),
+      serviceClient.from("user_sessions").select("*").in("user_id", ids),
+    ]);
 
-    // Get latest login events for each user
-    const { data: loginEvents } = await serviceClient
-      .from('user_info_events')
-      .select('user_id, created_at, event_data')
-      .in('user_id', userIds)
-      .in('event_type', ['login_completed', 'login_attempt'])
-      .order('created_at', { ascending: false });
+    const pMap = new Map<string, any>((profiles ?? []).map(p => [p.id, p]));
+    const sMap = new Map<string, any>((sessions ?? []).map(s => [s.user_id, s]));
 
-    // Group events by user_id and get the latest for each
-    const latestEvents = new Map<string, any>();
-    loginEvents?.forEach(event => {
-      if (!latestEvents.has(event.user_id)) {
-        latestEvents.set(event.user_id, event);
-      }
-    });
+    const users: UserListItem[] = allUsers.map(user => {
+      const prof = pMap.get(user.id);
+      const sess = sMap.get(user.id);
+      const role = resolveRole(user.email);
+      const displayName = prof?.display_name || humanNameFromEmail(user.email);
+      const phoneNumber = prof?.phone_number ?? null;
 
-    // Transform users to sanitized format
-    const userList: UserListItem[] = allUsers.map(user => {
-      const profile = profileMap.get(user.id);
-      const latestEvent = latestEvents.get(user.id);
-      
-      // Use profile role if available, otherwise resolve from email
-      const role = profile?.role || resolveRole(user.email);
-      const status = calculateStatus(user.last_sign_in_at);
-      const displayName = profile?.display_name || getDisplayName(user.email);
-      
-      // Prefer login_completed event timestamp, fallback to last_sign_in_at
-      const lastLoginAt = latestEvent?.event_type === 'login_completed' 
-        ? latestEvent.created_at 
-        : user.last_sign_in_at;
+      const status = computeStatus(sess?.last_seen_at, user.last_sign_in_at);
 
       return {
         id: user.id,
         email: user.email,
         createdAt: user.created_at,
         lastSignInAt: user.last_sign_in_at,
-        lastLoginAt,
+        lastLoginAt: sess?.last_login_at ?? user.last_sign_in_at ?? null,
+        lastSeenAt: sess?.last_seen_at ?? null,
         role,
         status,
         displayName,
-        phoneNumber: profile?.phone_number || null
+        phoneNumber,
+        security: {
+          ip: sess?.last_ip ?? null,
+          deviceFingerprint: sess?.last_device_fingerprint ?? null,
+          location: sess?.last_location ?? null,
+        }
       };
     });
 
-    // Calculate totals
     const totals = {
-      total: userList.length,
-      active: userList.filter(user => user.status === 'Active').length,
-      idle: userList.filter(user => user.status === 'Idle').length,
-      admins: userList.filter(user => user.role === 'admin').length
+      total: users.length,
+      active: users.filter(u => u.status === 'Active').length,
+      idle: users.filter(u => u.status === 'Idle').length,
+      admins: users.filter(u => u.role === 'admin').length,
     };
 
-    return NextResponse.json({
-      ok: true,
-      users: userList,
-      totals
-    }, {
-      headers: {
-        'Cache-Control': 'no-store'
-      }
-    });
-
+    return NextResponse.json({ ok: true, users, totals }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('Error in /api/users/list:', error);
-    return NextResponse.json({
-      ok: false,
-      error: 'INTERNAL_SERVER_ERROR'
-    }, { status: 500 });
+    return NextResponse.json({ ok: false, error: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
   }
 }

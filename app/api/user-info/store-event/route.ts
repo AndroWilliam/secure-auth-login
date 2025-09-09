@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Extract user_id from event_data if present
-  const user_id = event_data?.userId || null;
+  const user_id = (event_data as any)?.userId || null;
 
   const { data, error } = await supabase
     .from("user_info_events")
@@ -55,6 +55,31 @@ export async function POST(req: NextRequest) {
       { ok: false, error: "STORE_FAILED", detail: error.message },
       { status: 500 }
     );
+  }
+
+  // If login completed, also upsert session snapshot
+  try {
+    if (event_type === "login_completed" && (event_data as any)?.userId) {
+      const user_id = (event_data as any).userId as string;
+      const ipAddress = (event_data as any)?.ipAddress ?? null;
+      const deviceFingerprint = (event_data as any)?.device_id ?? null;
+      const locationData = (event_data as any)?.locationData ?? null;
+
+      await supabase
+        .from("user_sessions")
+        .upsert(
+          {
+            user_id,
+            last_login_at: new Date().toISOString(),
+            last_ip: ipAddress,
+            last_device_fingerprint: deviceFingerprint,
+            last_location: locationData ? locationData : null,
+          },
+          { onConflict: "user_id" }
+        );
+    }
+  } catch (e) {
+    console.warn("[STORE_EVENT] Failed to update user_sessions:", e);
   }
 
   return NextResponse.json(
