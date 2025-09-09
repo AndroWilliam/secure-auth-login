@@ -22,6 +22,7 @@ import { UserListItem } from "@/app/api/users/list/route";
 import { UserRole } from "@/lib/roles";
 import { UserDetailsDialog } from "./UserDetailsDialog";
 import { fmtDate, fmtPhone, fmtLocation } from "@/lib/utils/format";
+import { format } from "date-fns";
 
 interface AdminUsersTableProps {
   userRole: UserRole;
@@ -391,10 +392,10 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                       {user.email}
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-300">
-                      {fmtDate(user.createdAt)}
+                      {user.createdAt ? format(new Date(user.createdAt), "M/d/yyyy") : "Never"}
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-300">
-                      {fmtPhone(user.phone)}
+                      {user.phone ?? "N/A"}
                     </td>
                     <td className="py-4 px-4">
                       <Badge className={getStatusColor(user.status)}>
@@ -402,7 +403,7 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                       </Badge>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-300">
-                      {fmtDate(user.lastLoginAt)}
+                      {user.lastLoginAt ? format(new Date(user.lastLoginAt), "M/d/yyyy") : "Never"}
                     </td>
                     {userRole === 'admin' && (
                       <td className="py-4 px-4">

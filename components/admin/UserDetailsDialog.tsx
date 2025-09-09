@@ -11,23 +11,23 @@ import { UserRole } from "@/lib/roles";
 import { toast } from "sonner";
 import { Loader2, Save, X } from "lucide-react";
 import { fmtDate, fmtPhone, fmtLocation } from "@/lib/utils/format";
+import { format } from "date-fns";
 
 export interface UserDetail {
   id: string;
   email: string;
-  displayName: string;
-  phone?: string;
+  name: string;
+  phone?: string | null;
   role: 'admin' | 'viewer' | 'moderator';
   createdAt: string;
-  lastSignInAt?: string;
-  lastLoginAt?: string;
+  lastLoginAt?: string | null;
   status: 'Active' | 'Idle' | 'Inactive';
-  lastLoginIp?: string;
-  lastLoginDeviceId?: string;
-  lastLoginLocation?: {
-    city?: string;
-    country?: string;
-  };
+}
+
+export interface SecurityInfo {
+  ipAddress?: string | null;
+  deviceFingerprint?: string | null;
+  location?: any | null;
 }
 
 interface UserDetailsDialogProps {
@@ -46,6 +46,7 @@ export function UserDetailsDialog({
   onUpdated 
 }: UserDetailsDialogProps) {
   const [user, setUser] = useState<UserDetail | null>(null);
+  const [security, setSecurity] = useState<SecurityInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function UserDetailsDialog({
   // Form state for editing
   const [formData, setFormData] = useState({
     email: '',
-    displayName: '',
+    name: '',
     phone: '',
     role: 'viewer' as 'admin' | 'viewer'
   });
@@ -70,7 +71,7 @@ export function UserDetailsDialog({
     setError(null);
     
     try {
-      const response = await fetch(`/api/users/detail/${userId}`, {
+      const response = await fetch(`/api/users/${userId}/detail`, {
         cache: 'no-store'
       });
       
@@ -84,9 +85,10 @@ export function UserDetailsDialog({
       }
       
       setUser(result.user);
+      setSecurity(result.security);
       setFormData({
         email: result.user.email,
-        displayName: result.user.displayName,
+        name: result.user.name,
         phone: result.user.phone || '',
         role: result.user.role
       });
@@ -192,11 +194,11 @@ export function UserDetailsDialog({
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="displayName">Name</Label>
+              <Label htmlFor="name">Name</Label>
               <Input
-                id="displayName"
-                value={formData.displayName}
-                onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 disabled={userRole !== 'admin'}
                 className="mt-1"
               />
@@ -252,11 +254,15 @@ export function UserDetailsDialog({
             </div>
             <div>
               <Label>Account Created</Label>
-              <p className="mt-1 text-sm text-gray-600">{fmtDate(user.createdAt)}</p>
+              <p className="mt-1 text-sm text-gray-600">
+                {user.createdAt ? format(new Date(user.createdAt), "M/d/yyyy p") : "Never"}
+              </p>
             </div>
             <div>
               <Label>Last Login</Label>
-              <p className="mt-1 text-sm text-gray-600">{fmtDate(user.lastLoginAt)}</p>
+              <p className="mt-1 text-sm text-gray-600">
+                {user.lastLoginAt ? format(new Date(user.lastLoginAt), "M/d/yyyy p") : "Never"}
+              </p>
             </div>
           </div>
 
@@ -267,19 +273,21 @@ export function UserDetailsDialog({
               <div>
                 <Label>IP Address</Label>
                 <p className="mt-1 text-sm text-gray-600 font-mono">
-                  {user.lastLoginIp || 'Unknown'}
+                  {security?.ipAddress ?? 'Unknown'}
                 </p>
               </div>
               <div>
                 <Label>Device Fingerprint</Label>
                 <p className="mt-1 text-sm text-gray-600 font-mono break-all">
-                  {user.lastLoginDeviceId || 'Unknown'}
+                  {security?.deviceFingerprint ?? 'Unknown'}
                 </p>
               </div>
               <div className="md:col-span-2">
                 <Label>Location</Label>
                 <p className="mt-1 text-sm text-gray-600">
-                  {fmtLocation(user.lastLoginLocation)}
+                  {security?.location
+                    ? `${security.location.city ?? "Unknown"}, ${security.location.country ?? ""}`.trim()
+                    : "Unknown"}
                 </p>
               </div>
             </div>

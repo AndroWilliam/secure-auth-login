@@ -6,20 +6,12 @@ import { resolveRole } from "@/lib/roles";
 export interface AdminUser {
   id: string;
   email: string;
-  createdAt: string;
-  lastSignInAt?: string | null;
-  lastLoginAt?: string | null;
-  lastSeenAt?: string | null;
+  displayName?: string;
+  createdAt: string;            // auth.users.created_at
+  lastLoginAt?: string | null;  // auth.users.last_sign_in_at
+  phone?: string | null;        // public.profiles.phone_number
   role: 'admin' | 'viewer' | 'moderator';
   status: 'Active' | 'Idle' | 'Inactive';
-  displayName?: string;
-  phone?: string | null;
-  lastLoginIp?: string | null;
-  lastLoginDeviceId?: string | null;
-  lastLoginLocation?: {
-    city?: string | null;
-    country?: string | null;
-  } | null;
 }
 
 export interface AdminUsersResponse {
@@ -101,49 +93,40 @@ export async function GET(request: NextRequest) {
 
     const ids = allUsers.map(u => u.id);
 
-    // Batch fetch profiles + latest login events
-    const [{ data: profiles }, { data: latestLogins }] = await Promise.all([
-      serviceClient.from("profiles").select("id, display_name, phone_number").in("id", ids),
-      serviceClient.rpc('get_latest_login_events', { user_ids: ids }),
-    ]);
+    // Fetch profiles for these users
+    const { data: profiles } = await serviceClient
+      .from('profiles')
+      .select('id, display_name, phone_number')
+      .in('id', ids);
 
-    const pMap = new Map<string, any>((profiles ?? []).map(p => [p.id, p]));
-    const lMap = new Map<string, any>((latestLogins ?? []).map((l: any) => [l.user_id, l]));
+    const profileById = new Map<string, { phone_number: string | null; display_name: string | null }>();
+    (profiles || []).forEach(p => profileById.set(p.id, { 
+      phone_number: p.phone_number || null,
+      display_name: p.display_name || null
+    }));
 
     // Transform users to AdminUser format
     const adminUsers: AdminUser[] = allUsers.map(user => {
-      const prof = pMap.get(user.id);
-      const login = lMap.get(user.id);
-      
-      // Use profile role if available, otherwise resolve from email
-      const role: 'admin' | 'viewer' | 'moderator' = prof?.role || resolveRole(user.email);
-      let status = computeStatus(login?.last_login_at, user.last_sign_in_at);
+      const profile = profileById.get(user.id);
+      const phone = profile?.phone_number ?? null;
+      const role: 'admin' | 'viewer' | 'moderator' = resolveRole(user.email);
+      const displayName = profile?.display_name || humanNameFromEmail(user.email);
       
       // Force Active for current user
+      let status = computeStatus(user.last_sign_in_at);
       if (user.email === email) {
         status = 'Active';
       }
-      
-      const displayName = prof?.display_name || humanNameFromEmail(user.email);
-      const phone = prof?.phone_number ?? null;
 
       return {
         id: user.id,
         email: user.email,
+        displayName,
         createdAt: user.created_at,
-        lastSignInAt: user.last_sign_in_at,
-        lastLoginAt: login?.last_login_at ?? user.last_sign_in_at ?? null,
-        lastSeenAt: null, // We'll use lastLoginAt for now
+        lastLoginAt: user.last_sign_in_at ?? null,
+        phone,
         role,
         status,
-        displayName,
-        phone,
-        lastLoginIp: login?.last_ip ?? null,
-        lastLoginDeviceId: login?.last_device_id ?? null,
-        lastLoginLocation: login?.last_city || login?.last_country ? {
-          city: login?.last_city ?? null,
-          country: login?.last_country ?? null,
-        } : null,
       };
     });
 
