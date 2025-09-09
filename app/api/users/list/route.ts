@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getSessionEmail, getSessionRole } from "@/lib/session";
 import { resolveRole } from "@/lib/roles";
 
-export interface AdminUser {
+export interface UserListItem {
   id: string;
   email: string;
   createdAt: string;
@@ -13,35 +13,31 @@ export interface AdminUser {
   displayName?: string;
 }
 
-export interface AdminUsersResponse {
-  users: AdminUser[];
-  totals: {
+export interface UserListResponse {
+  ok: boolean;
+  users?: UserListItem[];
+  totals?: {
     total: number;
     active: number;
     idle: number;
     admins: number;
   };
+  error?: string;
 }
 
 function calculateStatus(lastSignInAt: string | null | undefined): 'Active' | 'Idle' | 'Inactive' {
   if (!lastSignInAt) return 'Inactive';
   
-  const now = new Date();
-  const lastSignIn = new Date(lastSignInAt);
-  const diffMinutes = (now.getTime() - lastSignIn.getTime()) / (1000 * 60);
+  const now = Date.now();
+  const lastSignIn = new Date(lastSignInAt).getTime();
+  const deltaMinutes = (now - lastSignIn) / 60000;
   
-  if (diffMinutes <= 5) return 'Active';
-  if (diffMinutes <= 30) return 'Idle';
+  if (deltaMinutes <= 5) return 'Active';
+  if (deltaMinutes <= 30) return 'Idle';
   return 'Inactive';
 }
 
-function getDisplayName(email: string, profilesData?: any): string {
-  // If we have profile data with display_name, use it
-  if (profilesData?.display_name) {
-    return profilesData.display_name;
-  }
-  
-  // Otherwise, extract name from email local part
+function getDisplayName(email: string): string {
   const localPart = email.split('@')[0];
   return localPart
     .split('.')
@@ -49,26 +45,16 @@ function getDisplayName(email: string, profilesData?: any): string {
     .join(' ');
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Check authentication
     const email = await getSessionEmail();
     if (!email) {
-      console.log('GET /api/admin/users: No authenticated user');
+      console.log('GET /api/users/list: No authenticated user');
       return NextResponse.json({ 
         ok: false, 
-        error: "UNAUTHORIZED" 
+        error: 'UNAUTHORIZED' 
       }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const role = resolveRole(email);
-    if (role !== 'admin') {
-      console.log(`GET /api/admin/users: User ${email} is not admin (role: ${role})`);
-      return NextResponse.json({
-        ok: false,
-        error: "FORBIDDEN"
-      }, { status: 403 });
     }
 
     // Get service client for admin operations
@@ -87,10 +73,10 @@ export async function GET(request: NextRequest) {
       });
 
       if (error) {
-        console.error("Error fetching users:", error);
+        console.error('Error fetching users in /api/users/list:', error);
         return NextResponse.json({
-          success: false,
-          error: "Failed to fetch users"
+          ok: false,
+          error: 'FAILED_TO_FETCH_USERS'
         }, { status: 500 });
       }
 
@@ -102,9 +88,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Transform users to AdminUser format
-    const adminUsers: AdminUser[] = allUsers.map(user => {
-      const role: 'admin' | 'viewer' = user.email === 'androa687@gmail.com' ? 'admin' : 'viewer';
+    // Transform users to sanitized format
+    const userList: UserListItem[] = allUsers.map(user => {
+      const role = resolveRole(user.email);
       const status = calculateStatus(user.last_sign_in_at);
       const displayName = getDisplayName(user.email);
 
@@ -121,20 +107,16 @@ export async function GET(request: NextRequest) {
 
     // Calculate totals
     const totals = {
-      total: adminUsers.length,
-      active: adminUsers.filter(user => user.status === 'Active').length,
-      idle: adminUsers.filter(user => user.status === 'Idle').length,
-      admins: adminUsers.filter(user => user.role === 'admin').length
-    };
-
-    const response: AdminUsersResponse = {
-      users: adminUsers,
-      totals
+      total: userList.length,
+      active: userList.filter(user => user.status === 'Active').length,
+      idle: userList.filter(user => user.status === 'Idle').length,
+      admins: userList.filter(user => user.role === 'admin').length
     };
 
     return NextResponse.json({
       ok: true,
-      ...response
+      users: userList,
+      totals
     }, {
       headers: {
         'Cache-Control': 'no-store'
@@ -142,10 +124,10 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Error in admin users API:", error);
+    console.error('Error in /api/users/list:', error);
     return NextResponse.json({
       ok: false,
-      error: "INTERNAL_SERVER_ERROR"
+      error: 'INTERNAL_SERVER_ERROR'
     }, { status: 500 });
   }
 }

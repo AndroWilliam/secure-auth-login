@@ -5,29 +5,55 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Shield, Eye, UserCheck, Clock } from "lucide-react";
 import { AdminUsersTable } from "@/components/admin/AdminUsersTable";
+import { ErrorBoundary } from "@/components/admin/ErrorBoundary";
 import { AdminUser, AdminUsersResponse } from "@/app/api/admin/users/route";
+import { UserListItem, UserListResponse } from "@/app/api/users/list/route";
+import { UserRole } from "@/lib/roles";
 
 interface AdminUsersPageClientProps {
-  userRole: 'admin' | 'moderator' | 'viewer';
+  userRole: UserRole;
 }
 
 export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
-  const [data, setData] = useState<AdminUsersResponse | null>(null);
+  const [data, setData] = useState<AdminUsersResponse | UserListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentRole, setCurrentRole] = useState<UserRole>(userRole);
 
-  // Fetch real data from API
+  // Fetch role and data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/admin/users', {
-          cache: 'no-store'
-        });
+        setError(null);
+
+        // First, get current user role
+        const roleResponse = await fetch('/api/me', { cache: 'no-store' });
+        let role = userRole; // fallback to prop
+        
+        if (roleResponse.ok) {
+          const roleData = await roleResponse.json();
+          if (roleData.ok) {
+            role = roleData.role;
+            setCurrentRole(role);
+            console.log('Current user role:', role);
+          }
+        }
+
+        // Choose API endpoint based on role
+        const apiPath = role === 'admin' ? '/api/admin/users' : '/api/users/list';
+        console.log('Fetching data from:', apiPath);
+
+        const response = await fetch(apiPath, { cache: 'no-store' });
         
         if (!response.ok) {
-          if (response.status === 403) {
-            setError('Access denied. Admin privileges required.');
+          const errorData = await response.json().catch(() => ({}));
+          console.log('API error response:', response.status, errorData);
+          
+          if (response.status === 401) {
+            setError('Please log in to view this page');
+          } else if (response.status === 403) {
+            setError('Access denied. Admin privileges required for this action.');
           } else {
             setError('Failed to fetch user data');
           }
@@ -35,9 +61,16 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
         }
         
         const result = await response.json();
+        console.log('API response:', result);
+        
+        if (!result.ok) {
+          setError(result.error || 'Failed to fetch user data');
+          return;
+        }
+        
         setData(result);
       } catch (error) {
-        console.error('Error fetching admin data:', error);
+        console.error('Error fetching user data:', error);
         setError('Failed to fetch user data');
       } finally {
         setLoading(false);
@@ -45,7 +78,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
     };
 
     fetchData();
-  }, []);
+  }, [userRole]);
 
   if (loading) {
     return (
@@ -97,7 +130,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-300 text-sm font-medium">Total Users</p>
-                  <p className="text-2xl font-bold text-white">{data.totals.total}</p>
+                  <p className="text-2xl font-bold text-white">{data.totals?.total || 0}</p>
                 </div>
                 <Users className="h-8 w-8 text-gray-400" />
               </div>
@@ -109,7 +142,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-300 text-sm font-medium">Active Users</p>
-                  <p className="text-2xl font-bold text-white">{data.totals.active}</p>
+                  <p className="text-2xl font-bold text-white">{data.totals?.active || 0}</p>
                 </div>
                 <UserCheck className="h-8 w-8 text-gray-400" />
               </div>
@@ -121,7 +154,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-300 text-sm font-medium">Idle Users</p>
-                  <p className="text-2xl font-bold text-white">{data.totals.idle}</p>
+                  <p className="text-2xl font-bold text-white">{data.totals?.idle || 0}</p>
                 </div>
                 <Clock className="h-8 w-8 text-gray-400" />
               </div>
@@ -133,7 +166,7 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-300 text-sm font-medium">Admins</p>
-                  <p className="text-2xl font-bold text-white">{data.totals.admins}</p>
+                  <p className="text-2xl font-bold text-white">{data.totals?.admins || 0}</p>
                 </div>
                 <Shield className="h-8 w-8 text-gray-400" />
               </div>
@@ -150,12 +183,15 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">
-                  {userRole === 'admin' ? 'Administrator Access' : 'Moderator Access'}
+                  {currentRole === 'admin' ? 'Administrator Access' : 
+                   currentRole === 'moderator' ? 'Moderator Access' : 'Viewer Access'}
                 </h3>
                 <p className="text-gray-300">
-                  {userRole === 'admin' 
+                  {currentRole === 'admin' 
                     ? 'You can add, edit, and delete users directly. All changes take effect immediately.'
-                    : 'You can view users and submit change requests for admin approval.'
+                    : currentRole === 'moderator'
+                    ? 'You can view users and submit change requests for admin approval.'
+                    : 'You can view user information only. No modification permissions.'
                   }
                 </p>
               </div>
@@ -164,11 +200,13 @@ export function AdminUsersPageClient({ userRole }: AdminUsersPageClientProps) {
         </Card>
 
         {/* User Management Table */}
-        <AdminUsersTable 
-          userRole={userRole} 
-          users={data.users}
-          onRefresh={() => window.location.reload()}
-        />
+        <ErrorBoundary>
+          <AdminUsersTable 
+            userRole={currentRole} 
+            users={data.users}
+            onRefresh={() => window.location.reload()}
+          />
+        </ErrorBoundary>
       </div>
     </div>
   );

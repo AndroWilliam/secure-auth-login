@@ -18,10 +18,12 @@ import { toast } from "sonner";
 import { ExportUsersButton } from "./ExportUsersButton";
 import { AddUserButton } from "./AddUserButton";
 import { AdminUser } from "@/app/api/admin/users/route";
+import { UserListItem } from "@/app/api/users/list/route";
+import { UserRole } from "@/lib/roles";
 
 interface AdminUsersTableProps {
-  userRole: 'admin' | 'moderator' | 'viewer';
-  users?: AdminUser[];
+  userRole: UserRole;
+  users?: AdminUser[] | UserListItem[];
   onRefresh?: () => void;
 }
 
@@ -36,16 +38,16 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
 
-  // Convert AdminUser to UserRow format
-  const convertAdminUserToUserRow = (adminUser: AdminUser): UserRow => ({
-    id: adminUser.id,
-    email: adminUser.email,
-    full_name: adminUser.displayName || null,
+  // Convert AdminUser or UserListItem to UserRow format
+  const convertToUserRow = (user: AdminUser | UserListItem): UserRow => ({
+    id: user.id,
+    email: user.email,
+    full_name: user.displayName || null,
     phone: null, // Not available in auth users
-    role: adminUser.role,
-    status: adminUser.status.toLowerCase() as UserStatus,
-    created_at: adminUser.createdAt,
-    updated_at: adminUser.lastSignInAt || adminUser.createdAt
+    role: user.role,
+    status: user.status.toLowerCase() as UserStatus,
+    created_at: user.createdAt,
+    updated_at: user.lastSignInAt || user.createdAt
   });
 
   // Fetch users
@@ -54,7 +56,7 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
     try {
       if (realUsers) {
         // Use real data from props
-        let filteredUsers = realUsers.map(convertAdminUserToUserRow);
+        let filteredUsers = realUsers.map(convertToUserRow);
         
         // Apply search filter
         if (search) {
@@ -201,7 +203,7 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
     try {
       if (realUsers) {
         // Use real data from props
-        let filteredUsers = realUsers.map(convertAdminUserToUserRow);
+        let filteredUsers = realUsers.map(convertToUserRow);
         
         // Apply search filter
         if (search) {
