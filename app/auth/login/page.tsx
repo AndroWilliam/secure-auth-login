@@ -11,6 +11,7 @@ import { LocationVerificationStep } from "@/components/login/location-verificati
 import { DeviceVerificationStep } from "@/components/login/device-verification-step";
 import { OtpVerificationStep } from "@/components/login/otp-verification-step";
 import { VerificationPopup } from "@/components/login/verification-popup";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { tryGetGeolocationSilently } from "@/lib/utils/try-get-geo";
 import { userInfoClient } from "@/lib/sdk/secure-user-info-client";
 import { getDeviceId } from "@/lib/utils/get-device-id";
@@ -157,6 +158,7 @@ export default function LoginPage() {
 
         // After OTP, show verification popup
         setShowVerificationPopup(true);
+        setCurrentStep(1);
       } catch (e: any) {
         setError(e?.message || "OTP verification failed");
       } finally {
@@ -292,53 +294,14 @@ export default function LoginPage() {
     }
   }, [loginData.userId, loginData.email, currentStep, router]);
 
-  // ----- Render -----
-  if (currentStep > 1) {
-    return (
-      <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-        <div className="w-full max-w-lg">
-
-          {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          {currentStep === 2 && (
-            <OtpVerificationStep
-              onNext={handleOtpSubmit}
-              onBack={() => setCurrentStep(1)}
-              isLoading={isLoading}
-              email={loginData.email}
-              onResendOtp={async () => {
-                if (!loginData.userId || !loginData.email) return;
-                try {
-                  await fetchJSON("/api/login/send-otp", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                      user_id: loginData.userId, 
-                      email: loginData.email 
-                    }),
-                  });
-                } catch (e) {
-                  console.error("Failed to resend OTP:", e);
-                }
-              }}
-            />
-          )}
-        </div>
-      </div>
-    );
-  }
-
   // Direct redirect function as fallback
   const handleDirectRedirect = useCallback(() => {
     console.log("[LOGIN] Direct redirect to dashboard")
     router.replace("/dashboard")
   }, [router])
 
-  // Show verification popup if needed
+  // ----- Render -----
+  // Highest priority: popup
   if (showVerificationPopup) {
     return (
       <VerificationPopup
@@ -348,6 +311,37 @@ export default function LoginPage() {
         email={loginData.email}
         onDirectRedirect={handleDirectRedirect}
       />
+    );
+  }
+
+  // Next: OTP step
+  if (currentStep === 2) {
+    return (
+      <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+        <div className="w-full max-w-lg">
+          {error && (
+            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+          <ErrorBoundary fallback={<div className="text-center text-red-400">Something went wrong. Please refresh.</div>}>
+            <OtpVerificationStep
+              onNext={handleOtpSubmit}
+              onBack={() => setCurrentStep(1)}
+              isLoading={isLoading}
+              email={loginData.email}
+              onResendOtp={async () => {
+                if (!loginData.userId || !loginData.email) return;
+                await fetchJSON("/api/login/send-otp", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ user_id: loginData.userId, email: loginData.email }),
+                });
+              }}
+            />
+          </ErrorBoundary>
+        </div>
+      </div>
     );
   }
 

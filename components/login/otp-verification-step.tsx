@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { OtpInputBasic } from "./otp-input-basic"
 import { Mail, ArrowLeft } from "lucide-react"
 
 interface OtpVerificationStepProps {
@@ -54,25 +54,14 @@ export function OtpVerificationStep({ onNext, onBack, isLoading, email, onResend
 
         <div className="space-y-4">
           <div className="flex justify-center">
-            <InputOTP
-              maxLength={6}
+            <OtpInputBasic
               value={otpCode}
-              onChange={(value) => {
-                setOtpCode(value)
-                if (error) setError(null)
+              onChange={(v) => {
+                setOtpCode(v);
+                if (error) setError(null);
               }}
               disabled={isLoading}
-              containerClassName="gap-3"
-            >
-              <InputOTPGroup className="gap-3">
-                <InputOTPSlot index={0} className="w-12 h-12 text-lg font-semibold" />
-                <InputOTPSlot index={1} className="w-12 h-12 text-lg font-semibold" />
-                <InputOTPSlot index={2} className="w-12 h-12 text-lg font-semibold" />
-                <InputOTPSlot index={3} className="w-12 h-12 text-lg font-semibold" />
-                <InputOTPSlot index={4} className="w-12 h-12 text-lg font-semibold" />
-                <InputOTPSlot index={5} className="w-12 h-12 text-lg font-semibold" />
-              </InputOTPGroup>
-            </InputOTP>
+            />
           </div>
           
           {error && (
