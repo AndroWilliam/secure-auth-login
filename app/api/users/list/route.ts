@@ -70,11 +70,11 @@ export async function GET() {
     // 2) Profiles (phone/display name)
     const { data: profiles } = await serviceClient
       .from('profiles')
-      .select('uuid, display_name, phone_number')
-      .in('uuid', ids);
+      .select('id, display_name, phone_number')
+      .in('id', ids);
 
     const profileByUserId = new Map(
-      (profiles ?? []).map(p => [p.uuid, { phone: p.phone_number ?? null, name: p.display_name ?? null }])
+      (profiles ?? []).map(p => [p.id, { phone: p.phone_number ?? null, name: p.display_name ?? null }])
     );
 
     // 3) Latest login events

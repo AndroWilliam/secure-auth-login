@@ -54,11 +54,11 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
     id: user.id,
     email: user.email,
     full_name: user.displayName || null,
-    phone: null, // Not available in auth users
+    phone: user.phoneNumber || null, // Use enriched phone data
     role: user.role,
     status: user.status.toLowerCase() as UserStatus,
     created_at: user.createdAt,
-    updated_at: user.lastSignInAt || user.createdAt
+    updated_at: user.lastLoginAt || user.createdAt // Use enriched lastLoginAt
   });
 
   // Fetch users
@@ -355,12 +355,12 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
             <thead>
               <tr className="border-b border-gray-800">
                 <th className="text-left py-3 px-4 font-medium text-gray-300">#</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-300">Name</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-300">Email</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-300">Date Created</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-300">Mobile</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-300">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-300">Last Login</th>
+                <th className="text-center py-3 px-4 font-medium text-gray-300">Name</th>
+                <th className="text-center py-3 px-4 font-medium text-gray-300">Email</th>
+                <th className="text-center py-3 px-4 font-medium text-gray-300">Date Created</th>
+                <th className="text-center py-3 px-4 font-medium text-gray-300">Mobile</th>
+                <th className="text-center py-3 px-4 font-medium text-gray-300">Status</th>
+                <th className="text-center py-3 px-4 font-medium text-gray-300">Last Login</th>
                 {userRole === 'admin' && (
                   <th className="text-left py-3 px-4 font-medium text-gray-300">Actions</th>
                 )}
@@ -389,27 +389,27 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                     <td className="py-4 px-4 text-sm text-gray-300">
                       {(page - 1) * 10 + index + 1}
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-4 px-4 text-center">
                       <div className="font-medium text-white">
                         {user.full_name || 'No name'}
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-300">
+                    <td className="py-4 px-4 text-sm text-gray-300 text-center">
                       {user.email}
                     </td>
-                    <td className="whitespace-nowrap text-sm text-gray-300">
-                      {fmtDate(user.createdAt)}
+                    <td className="py-4 px-4 text-sm text-gray-300 text-center">
+                      {fmtDate(user.created_at)}
                     </td>
-                    <td className="whitespace-nowrap text-sm text-gray-300">
-                      {fmtPhone(user.phoneNumber)}
+                    <td className="py-4 px-4 text-sm text-gray-300 text-center">
+                      {fmtPhone(user.phone)}
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-4 px-4 text-center">
                       <Badge className={getStatusColor(user.status)}>
                         {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="whitespace-nowrap text-sm text-gray-300">
-                      {fmtDate(user.lastLoginAt)}
+                    <td className="py-4 px-4 text-sm text-gray-300 text-center">
+                      {fmtDate(user.updated_at)}
                     </td>
                     {userRole === 'admin' && (
                       <td className="py-4 px-4">
