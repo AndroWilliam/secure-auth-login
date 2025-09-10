@@ -428,7 +428,7 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                     <td className="py-4 px-4 text-sm text-gray-300 text-center">
                       {fmtDateOnly(user.created_at)}
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-300 text-center">
+                    <td className="py-4 px-4 text-sm text-gray-300 text-center whitespace-nowrap">
                       {fmtPhone(user.phone)}
                     </td>
                     <td className="py-4 px-4 text-center">
