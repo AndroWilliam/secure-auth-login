@@ -21,14 +21,42 @@ import { AdminUser } from "@/app/api/admin/users/route";
 import { UserListItem } from "@/app/api/users/list/route";
 import { UserRole } from "@/lib/roles";
 import { UserDetailsDialog } from "./UserDetailsDialog";
-import { fmtDate, fmtPhone, fmtLocation } from "@/lib/utils/format";
+import { fmtDate as fmtDateUtil, fmtPhone as fmtPhoneUtil, fmtLocation } from "@/lib/utils/format";
 import { format } from "date-fns";
 
-// Helper functions for formatting
-const fmtDate = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleString() : 'Never';
+// Helper functions for table-only formatting
+const fmtDateOnly = (iso?: string | null) => {
+  if (!iso) return 'Never';
+  try {
+    return new Date(iso).toLocaleDateString();
+  } catch {
+    return 'Never';
+  }
+};
 
-const fmtPhone = (s?: string | null) => s?.trim() || 'N/A';
+const fmtLastLogin = (iso?: string | null) => {
+  if (!iso) return 'Never';
+  const d = new Date(iso);
+  const now = new Date();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.floor((startOfToday - startOfThatDay) / oneDayMs);
+
+  let label: string;
+  if (dayDiff <= 0) label = 'Today';
+  else if (dayDiff === 1) label = 'Yesterday';
+  else if (dayDiff === 2) label = 'Two Days Ago';
+  else if (dayDiff < 7) label = `${dayDiff} Days Ago`;
+  else if (dayDiff < 30) label = 'More than a Week ago';
+  else if (dayDiff < 90) label = 'More than a Month ago';
+  else label = 'A while ago';
+
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return `${time} • ${label}`;
+};
+
+const fmtPhone = (s?: string | null) => fmtPhoneUtil(s);
 
 interface AdminUsersTableProps {
   userRole: UserRole;
@@ -398,7 +426,7 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                       {user.email}
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-300 text-center">
-                      {fmtDate(user.created_at)}
+                      {fmtDateOnly(user.created_at)}
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-300 text-center">
                       {fmtPhone(user.phone)}
@@ -409,7 +437,7 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                       </Badge>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-300 text-center">
-                      {fmtDate(user.updated_at)}
+                      {fmtLastLogin(user.updated_at)}
                     </td>
                     {userRole === 'admin' && (
                       <td className="py-4 px-4">
