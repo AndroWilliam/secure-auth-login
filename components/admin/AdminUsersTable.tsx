@@ -24,6 +24,12 @@ import { UserDetailsDialog } from "./UserDetailsDialog";
 import { fmtDate, fmtPhone, fmtLocation } from "@/lib/utils/format";
 import { format } from "date-fns";
 
+// Helper functions for formatting
+const fmtDate = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleString() : 'Never';
+
+const fmtPhone = (s?: string | null) => s?.trim() || 'N/A';
+
 interface AdminUsersTableProps {
   userRole: UserRole;
   users?: AdminUser[] | UserListItem[];
@@ -391,19 +397,19 @@ export function AdminUsersTable({ userRole, users: realUsers, onRefresh }: Admin
                     <td className="py-4 px-4 text-sm text-gray-300">
                       {user.email}
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-300">
-                      {user.createdAt ? format(new Date(user.createdAt), "M/d/yyyy") : "Never"}
+                    <td className="whitespace-nowrap text-sm text-gray-300">
+                      {fmtDate(user.createdAt)}
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-300">
-                      {user.phone ?? "N/A"}
+                    <td className="whitespace-nowrap text-sm text-gray-300">
+                      {fmtPhone(user.phoneNumber)}
                     </td>
                     <td className="py-4 px-4">
                       <Badge className={getStatusColor(user.status)}>
                         {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-300">
-                      {user.lastLoginAt ? format(new Date(user.lastLoginAt), "M/d/yyyy") : "Never"}
+                    <td className="whitespace-nowrap text-sm text-gray-300">
+                      {fmtDate(user.lastLoginAt)}
                     </td>
                     {userRole === 'admin' && (
                       <td className="py-4 px-4">

@@ -7,11 +7,11 @@ export interface UserListItem {
   id: string;
   email: string;
   displayName?: string;
-  createdAt: string;            // auth.users.created_at
-  lastLoginAt?: string | null;  // auth.users.last_sign_in_at
-  phone?: string | null;        // public.profiles.phone_number
   role: 'admin' | 'viewer' | 'moderator';
   status: 'Active' | 'Idle' | 'Inactive';
+  createdAt: string;            // from auth.users.created_at
+  lastLoginAt?: string | null;  // from user_info_events (fallback last_sign_in_at)
+  phoneNumber?: string | null;  // from profiles.phone_number
 }
 
 export interface UserListResponse {
@@ -67,39 +67,61 @@ export async function GET() {
 
     const ids = allUsers.map(u => u.id);
 
-    // 2) Fetch profiles for these users
+    // 2) Profiles (phone/display name)
     const { data: profiles } = await serviceClient
       .from('profiles')
-      .select('id, display_name, phone_number')
-      .in('id', ids);
+      .select('uuid, display_name, phone_number')
+      .in('uuid', ids);
 
-    const profileById = new Map<string, { phone_number: string | null; display_name: string | null }>();
-    (profiles || []).forEach(p => profileById.set(p.id, { 
-      phone_number: p.phone_number || null,
-      display_name: p.display_name || null
-    }));
+    const profileByUserId = new Map(
+      (profiles ?? []).map(p => [p.uuid, { phone: p.phone_number ?? null, name: p.display_name ?? null }])
+    );
 
-    const users: UserListItem[] = allUsers.map(user => {
-      const profile = profileById.get(user.id);
-      const phone = profile?.phone_number ?? null;
-      const role = resolveRole(user.email);
-      const displayName = profile?.display_name || humanNameFromEmail(user.email);
+    // 3) Latest login events
+    const { data: rawEvents } = await serviceClient
+      .from('user_info_events')
+      .select('user_id, event_type, created_at')
+      .in('user_id', ids)
+      .in('event_type', ['login_attempt','login_completed','login_success'])
+      .order('created_at', { ascending: false });
+
+    const lastLoginByUserId = new Map<string, string>();
+    for (const e of rawEvents ?? []) {
+      if (!lastLoginByUserId.has(e.user_id)) {
+        lastLoginByUserId.set(e.user_id, e.created_at);
+      }
+    }
+
+    // 4) Build rows
+    function calculateStatus(lastIso: string | null | undefined): 'Active'|'Idle'|'Inactive' {
+      if (!lastIso) return 'Inactive';
+      const deltaMin = (Date.now() - new Date(lastIso).getTime()) / 60000;
+      if (deltaMin <= 5) return 'Active';
+      if (deltaMin <= 30) return 'Idle';
+      return 'Inactive';
+    }
+
+    const users: UserListItem[] = allUsers.map(u => {
+      const p = profileByUserId.get(u.id);
+      const lastLoginAt = lastLoginByUserId.get(u.id) ?? u.last_sign_in_at ?? null;
+      const createdAt = u.created_at; // always present
+      const role = resolveRole(u.email); // existing helper
       
       // Force Active for current user
-      let status = computeStatus(user.last_sign_in_at);
-      if (user.email === email) {
+      let status = calculateStatus(lastLoginAt);
+      if (u.email === email) {
         status = 'Active';
       }
 
       return {
-        id: user.id,
-        email: user.email,
-        displayName,
-        createdAt: user.created_at,
-        lastLoginAt: user.last_sign_in_at ?? null,
-        phone,
+        id: u.id,
+        email: u.email,
+        displayName: p?.name ?? undefined,
         role,
         status,
+        createdAt,
+        lastLoginAt,
+        phoneNumber: p?.phone ?? null,
       };
     });
 
